@@ -169,7 +169,7 @@ fun TutorialOverlay(
         }
 
         // The callout goes beside the spotlight; for board cells, beside the whole board when there's room, so it
-        // doesn't hide gems.
+        // doesn't hide items.
         val focus = holes.reduceOrNull(::union)
         val avoid = if (step.target is Target.Cells && board != null && focus != null) union(board, focus) else focus
         val gap = with(density) { 16.dp.toPx() }
@@ -215,7 +215,7 @@ fun TutorialOverlay(
                             Text(if (last) "Got it" else "Next", fontWeight = FontWeight.Bold)
                         }
                     } else {
-                        Text("Swipe the highlighted gems", fontSize = 12.sp, color = PuzzlerColors.gold, modifier = Modifier.width(160.dp))
+                        Text("Swipe the highlighted items", fontSize = 12.sp, color = PuzzlerColors.gold, modifier = Modifier.width(160.dp))
                     }
                 }
             }

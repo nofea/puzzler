@@ -36,7 +36,7 @@ class RulesCard(
 
 /** Content of the How to play pages (docs/SPEC.md §6). */
 object Rules {
-    // Demo boards are 5×5. Background gems use colors 0-3 in a pattern with no runs; P and Q mark the pieces that
+    // Demo boards are 5×5. Background items use colors 0-3 in a pattern with no runs; P and Q mark the pieces that
     // matter, using colors 5 (purple star) and 4 (blue hexagon) so they stand out.
     private const val P = '5'
     private const val Q = '4'
@@ -62,10 +62,10 @@ object Rules {
         RulesCard(
             "Basics",
             listOf(
-                "Swipe a gem onto a neighbor to swap them.",
-                "Line up 3 or more of the same gem, across or down, to clear them.",
+                "Swipe an item onto a neighbor to swap them.",
+                "Line up 3 or more of the same item, across or down, to clear them.",
                 "A swap that doesn't make a match bounces back and costs nothing.",
-                "Cleared gems fall, and new ones drop in from the top.",
+                "Cleared items fall, and new ones drop in from the top.",
                 "If no move is possible, the board shuffles for free.",
             ),
             listOf(
@@ -79,7 +79,7 @@ object Rules {
         ),
         RulesCard(
             "Scoring",
-            listOf("Falling gems can make new matches: a cascade. Each cascade step multiplies its points: ×1, ×1.5, ×2, ×2.5 …"),
+            listOf("Falling items can make new matches: a cascade. Each cascade step multiplies its points: ×1, ×1.5, ×2, ×2.5 …"),
             listOf(
                 RuleDemo(
                     "Cascade: the second match scores ×1.5",
@@ -95,7 +95,7 @@ object Rules {
                 "Line of 4" to "10",
                 "L or T shape" to "15",
                 "Line of 5" to "25",
-                "Gem cleared by a special" to "+1",
+                "Item cleared by a special" to "+1",
                 "Jelly cleared" to "+2",
                 "Stone broken" to "+3",
             ),
@@ -103,13 +103,13 @@ object Rules {
         RulesCard(
             "Specials",
             listOf(
-                "Line of 4 → striped gem: clears its whole row or column (the stripes show which).",
+                "Line of 4 → striped item: clears its whole row or column (the stripes show which).",
                 "L or T shape → bomb: clears the 3×3 area around it.",
-                "Line of 5 → color bomb: swap it with any gem to clear every gem of that color.",
+                "Line of 5 → color bomb: swap it with any item to clear every item of that color.",
                 "Specials fire when they're matched or hit by another special, so chains are possible.",
             ),
             listOf(
-                RuleDemo("Line of 4 makes a striped gem", board(Pos(2, 0) to P, Pos(2, 1) to P, Pos(2, 3) to P, Pos(1, 2) to P), listOf(dropIn)),
+                RuleDemo("Line of 4 makes a striped item", board(Pos(2, 0) to P, Pos(2, 1) to P, Pos(2, 3) to P, Pos(1, 2) to P), listOf(dropIn)),
                 RuleDemo(
                     "L or T shape makes a bomb",
                     board(Pos(2, 0) to P, Pos(2, 1) to P, Pos(1, 2) to P, Pos(3, 2) to P, Pos(4, 2) to P),
@@ -121,7 +121,7 @@ object Rules {
                     listOf(dropIn),
                 ),
                 RuleDemo(
-                    "A matched striped gem clears its row",
+                    "A matched striped item clears its row",
                     board(Pos(2, 0) to P, Pos(2, 1) to P, Pos(1, 2) to P),
                     listOf(dropIn),
                 ) { special(Pos(2, 1), Special.STRIPED_H) },
@@ -134,8 +134,8 @@ object Rules {
                 "Striped + striped: a row and a column.",
                 "Striped + bomb: three rows and three columns.",
                 "Bomb + bomb: a 5×5 area.",
-                "Color bomb + gem: every gem of that color.",
-                "Color bomb + special: every gem of that color becomes that special, and they all fire.",
+                "Color bomb + item: every item of that color.",
+                "Color bomb + special: every item of that color becomes that special, and they all fire.",
                 "Color bomb + color bomb: the whole board.",
             ),
             listOf(
@@ -143,15 +143,15 @@ object Rules {
                     special(Pos(2, 2), Special.STRIPED_H)
                     special(Pos(2, 3), Special.BOMB)
                 },
-                RuleDemo("Color bomb + gem", board(Pos(2, 2) to '*'), listOf(DemoMove(Pos(2, 2), Pos(2, 3)))),
+                RuleDemo("Color bomb + item", board(Pos(2, 2) to '*'), listOf(DemoMove(Pos(2, 2), Pos(2, 3)))),
             ),
         ),
         RulesCard(
             "Obstacles",
             listOf(
-                "Jelly (pink) sits under a gem. Clear that gem to clear the jelly: +2.",
+                "Jelly (pink) sits under an item. Clear that item to clear the jelly: +2.",
                 "Stones don't move. Match next to one, or hit it with a special, to crack it. Dark stones take two hits; +3 when broken.",
-                "Chained gems can't be swapped and don't fall. Include one in a match to free it.",
+                "Chained items can't be swapped and don't fall. Include one in a match to free it.",
             ),
             listOf(
                 RuleDemo(

@@ -52,19 +52,19 @@ private val RevealEasing = CubicBezierEasing(0.4f, 0f, 0.6f, 1f)
 
 /** Intro timeline in milliseconds (docs/SPEC.md §4). */
 private object Intro {
-    const val GEM_STAGGER = 60f
-    const val GEM_FLIGHT = 500f
+    const val ITEM_STAGGER = 60f
+    const val ITEM_FLIGHT = 500f
     const val FLASH = 800f
     const val FLASH_LENGTH = 300f
     const val DETONATE = 1300f
     const val END = 2000f
 
-    fun gemStart(i: Int) = i * GEM_STAGGER
-    fun gemLand(i: Int) = gemStart(i) + GEM_FLIGHT
+    fun itemStart(i: Int) = i * ITEM_STAGGER
+    fun itemLand(i: Int) = itemStart(i) + ITEM_FLIGHT
 }
 
 /**
- * Launch intro drawn over the level map: the gems fly in and lock around the splash orb, the title appears, then the
+ * Launch intro drawn over the level map: the items fly in and lock around the splash orb, the title appears, then the
  * bomb detonates and a growing circle reveals the map underneath. Tapping skips ahead to the detonation.
  * [anchor] arrives when the system splash hands over; until then only the splash background is drawn.
  */
@@ -97,13 +97,13 @@ fun IntroOverlay(anchor: OrbAnchor?, progressRepo: ProgressRepository, onDone: (
         time.animateTo(Intro.END, tween((Intro.END - time.value).toInt().coerceAtLeast(0), easing = LinearEasing))
         onDone()
     }
-    // Sounds and haptics as the timeline crosses each beat. Gems skipped past by a tap land silently.
+    // Sounds and haptics as the timeline crosses each beat. Items skipped past by a tap land silently.
     LaunchedEffect(Unit) {
         val landed = BooleanArray(PuzzlerColors.pieces.size)
         var detonated = false
         snapshotFlow { time.value }.collect { t ->
             for (i in landed.indices) {
-                if (!landed[i] && t >= Intro.gemLand(i)) {
+                if (!landed[i] && t >= Intro.itemLand(i)) {
                     landed[i] = true
                     if (t < Intro.DETONATE) {
                         sound.play(Sfx.LOCK)
@@ -119,6 +119,7 @@ fun IntroOverlay(anchor: OrbAnchor?, progressRepo: ProgressRepository, onDone: (
         }
     }
 
+    val images = rememberItemImages()
     val textMeasurer = rememberTextMeasurer()
     val titleStyle = TextStyle(fontFamily = PuzzlerFonts.display, fontSize = 48.sp, color = PuzzlerColors.gold, letterSpacing = 4.sp)
     val taglineStyle = TextStyle(fontFamily = PuzzlerFonts.display, fontSize = 16.sp, color = Color.White.copy(alpha = 0.7f))
@@ -155,19 +156,19 @@ fun IntroOverlay(anchor: OrbAnchor?, progressRepo: ProgressRepository, onDone: (
             }
         }
 
-        // Gems fly in to the ring, then (after detonating) out past the screen edge, over the revealed map.
+        // Items fly in to the ring, then (after detonating) out past the screen edge, over the revealed map.
         if (started) {
-            PuzzlerColors.pieces.forEachIndexed { i, color ->
-                if (t < Intro.gemStart(i)) return@forEachIndexed
+            images.indices.forEach { i ->
+                if (t < Intro.itemStart(i)) return@forEach
                 val dir = ColorBomb.direction(i)
                 val ring = orb * ColorBomb.RING
                 val dist = if (t < Intro.DETONATE) {
-                    val f = FastOutSlowInEasing.transform(((t - Intro.gemStart(i)) / Intro.GEM_FLIGHT).coerceIn(0f, 1f))
+                    val f = FastOutSlowInEasing.transform(((t - Intro.itemStart(i)) / Intro.ITEM_FLIGHT).coerceIn(0f, 1f))
                     far + (ring - far) * f
                 } else {
                     ring + far * FastOutLinearInEasing.transform(boom)
                 }
-                drawPath(shapePath(i, center + dir * dist, orb * ColorBomb.GEM), color)
+                drawItem(images, i, center + dir * dist, orb * ColorBomb.ITEM, shadow = false)
             }
         }
 

@@ -23,14 +23,17 @@ object PuzzlerColors {
     val gold = Color(0xFFFFD34D)
     val bombOrb = Color(0xFF140A26)
 
-    /** Piece colors, paired with distinct shapes in [BoardCanvas] so color isn't the only cue. */
+    /**
+     * Piece colors by color index. Each item's artwork is recolored to its color (docs/SPEC.md §7), so shape and color
+     * both identify a piece.
+     */
     val pieces = listOf(
-        Color(0xFFE5484D), // red circle
-        Color(0xFFFF9F2E), // orange square
-        Color(0xFFF5D442), // yellow diamond
-        Color(0xFF46C46E), // green triangle
-        Color(0xFF3E8BFF), // blue hexagon
-        Color(0xFFB065F0), // purple star
+        Color(0xFFE5484D), // red: fries
+        Color(0xFFFF9F2E), // orange: burger
+        Color(0xFFF5D442), // yellow: pizza
+        Color(0xFF46C46E), // green: potted plant
+        Color(0xFF3E8BFF), // blue: soda can
+        Color(0xFFB065F0), // purple: chocolate bar
     )
 }
 

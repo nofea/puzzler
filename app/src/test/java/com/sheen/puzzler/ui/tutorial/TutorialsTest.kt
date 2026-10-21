@@ -33,7 +33,7 @@ class TutorialsTest {
     fun `level 6 covers the timer, limits, jelly and specials`() {
         val engine = levels[5].newEngine()
         val steps = Tutorials.forLevel(6, engine)!!
-        assertEquals(listOf("Timer", "Two limits", "Jelly", "Special gems"), steps.map { it.title })
+        assertEquals(listOf("Timer", "Two limits", "Jelly", "Special items"), steps.map { it.title })
         val jelly = steps[2].target as Target.Cells
         assertTrue(jelly.cells.isNotEmpty())
         // Guided when the starting board can make a special; otherwise an explanation that points to the rules page.

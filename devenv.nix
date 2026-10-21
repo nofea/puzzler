@@ -23,7 +23,8 @@
 
   languages.kotlin.enable = true;
 
-  packages = [ pkgs.gradle ];
+  # librsvg and libwebp render the item artwork (scripts/render-items.py).
+  packages = [ pkgs.gradle pkgs.librsvg pkgs.libwebp pkgs.python3 ];
 
   env.PUZZLER_AVD = "puzzler-api35";
 
@@ -35,6 +36,7 @@
     gen-keystore.exec = "./scripts/gen-keystore.sh \"$@\"";
     verify-apk.exec = "./scripts/verify-apk.sh \"$@\"";
     run-emulator.exec = "./scripts/run-emulator.sh \"$@\"";
+    render-items.exec = "python3 ./scripts/render-items.py \"$@\"";
     install-apk.exec = ''
       apk="''${1:-app/build/outputs/apk/release/app-release.apk}"
       adb install -r "$apk"
@@ -44,6 +46,6 @@
   enterShell = ''
     echo "Puzzler dev shell — JDK: $(java -version 2>&1 | head -1)"
     echo "ANDROID_HOME=$ANDROID_HOME"
-    echo "Scripts: build-debug build-release unit-test ui-test gen-keystore verify-apk run-emulator install-apk"
+    echo "Scripts: build-debug build-release unit-test ui-test gen-keystore verify-apk run-emulator install-apk render-items"
   '';
 }

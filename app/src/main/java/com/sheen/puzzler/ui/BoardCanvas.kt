@@ -16,9 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -27,8 +29,8 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import com.sheen.puzzler.engine.BoardSnapshot
-import com.sheen.puzzler.engine.Piece
 import com.sheen.puzzler.engine.PhaseKind
+import com.sheen.puzzler.engine.Piece
 import com.sheen.puzzler.engine.Pos
 import com.sheen.puzzler.engine.Special
 import kotlin.math.abs
@@ -60,6 +62,7 @@ fun BoardCanvas(
     val swipe by rememberUpdatedState(onSwipe)
     val rows = current.rows
     val cols = current.cols
+    val images = rememberItemImages()
 
     Canvas(
         modifier
@@ -95,7 +98,7 @@ fun BoardCanvas(
         val t = progress.value
         val cell = size.width / cols
         drawTiles(current, previous, t, cell)
-        drawPieces(previous, current, phaseKind, t, cell)
+        drawPieces(images, previous, current, phaseKind, t, cell)
         drawOverlays(previous, current, t, cell)
         if (selected != null) {
             drawRoundRect(
@@ -133,7 +136,7 @@ private fun DrawScope.drawTiles(current: BoardSnapshot, previous: BoardSnapshot,
     }
 }
 
-private fun DrawScope.drawPieces(previous: BoardSnapshot, current: BoardSnapshot, kind: PhaseKind?, t: Float, cell: Float) {
+private fun DrawScope.drawPieces(images: List<ImageBitmap>, previous: BoardSnapshot, current: BoardSnapshot, kind: PhaseKind?, t: Float, cell: Float) {
     val prevPos = HashMap<Long, Pos>()
     val prevPiece = HashMap<Long, Piece>()
     if (previous.rows == current.rows && previous.cols == current.cols) {
@@ -161,7 +164,7 @@ private fun DrawScope.drawPieces(previous: BoardSnapshot, current: BoardSnapshot
             }
         }
         if (row < -0.5f) continue // still above the board
-        drawPiece(piece, Offset((col + 0.5f) * cell, (row + 0.5f) * cell), cell * 0.40f * scale, 1f)
+        drawPiece(images, piece, Offset((col + 0.5f) * cell, (row + 0.5f) * cell), cell * 0.40f * scale, 1f)
     }
 
     // Pieces cleared in this phase shrink and fade out.
@@ -169,7 +172,7 @@ private fun DrawScope.drawPieces(previous: BoardSnapshot, current: BoardSnapshot
         for ((id, pos) in prevPos) {
             if (id in currentIds) continue
             val shrink = 1f - t
-            drawPiece(prevPiece.getValue(id), Offset((pos.col + 0.5f) * cell, (pos.row + 0.5f) * cell), cell * 0.40f * (0.6f + 0.6f * shrink), shrink)
+            drawPiece(images, prevPiece.getValue(id), Offset((pos.col + 0.5f) * cell, (pos.row + 0.5f) * cell), cell * 0.40f * (0.6f + 0.6f * shrink), shrink)
         }
     }
 }
@@ -236,45 +239,39 @@ private fun DrawScope.drawLock(topLeft: Offset, cell: Float, alpha: Float) {
     )
 }
 
-private fun DrawScope.drawPiece(piece: Piece, center: Offset, radius: Float, alpha: Float) {
+/** Draws [piece] centered on [center]; [radius] is about 0.4 of a cell. Specials get their overlay on top. */
+private fun DrawScope.drawPiece(images: List<ImageBitmap>, piece: Piece, center: Offset, radius: Float, alpha: Float) {
     if (piece.special == Special.COLOR_BOMB) {
         // Same design and proportions as the launcher icon (docs/SPEC.md §5).
-        drawColorBomb(center, radius, alpha)
+        drawColorBomb(images, center, radius, alpha)
         return
     }
+    val size = radius * 2.25f
+    drawItem(images, piece.color, center, size, alpha)
 
-    val color = PuzzlerColors.pieces[piece.color % PuzzlerColors.pieces.size]
-    val path = shapePath(piece.color, center, radius)
-    val brush = Brush.radialGradient(
-        listOf(lighten(color).copy(alpha = alpha), color.copy(alpha = alpha), darken(color).copy(alpha = alpha)),
-        center = center - Offset(radius * 0.3f, radius * 0.3f),
-        radius = radius * 1.6f,
-    )
-    drawPath(path, brush)
-    drawPath(path, darken(color).copy(alpha = 0.6f * alpha), style = Stroke(radius * 0.08f))
-    // Glossy highlight.
-    drawCircle(Color.White.copy(alpha = 0.45f * alpha), radius * 0.16f, center - Offset(radius * 0.35f, radius * 0.35f))
-
+    val box = RoundRect(Rect(center, size / 2 * 0.86f), CornerRadius(size * 0.2f))
     when (piece.special) {
-        Special.STRIPED_H, Special.STRIPED_V -> clipPath(path) {
-            val white = Color.White.copy(alpha = 0.75f * alpha)
+        // Three white stripes across the item, along the line it clears.
+        Special.STRIPED_H, Special.STRIPED_V -> clipPath(Path().apply { addRoundRect(box) }) {
+            val white = Color.White.copy(alpha = 0.8f * alpha)
+            val shade = Color.Black.copy(alpha = 0.25f * alpha)
             for (k in -1..1) {
-                val o = k * radius * 0.45f
-                if (piece.special == Special.STRIPED_H) {
-                    drawLine(white, Offset(center.x - radius, center.y + o), Offset(center.x + radius, center.y + o), radius * 0.16f)
+                val o = k * size * 0.24f
+                val (from, to) = if (piece.special == Special.STRIPED_H) {
+                    Offset(box.left, center.y + o) to Offset(box.right, center.y + o)
                 } else {
-                    drawLine(white, Offset(center.x + o, center.y - radius), Offset(center.x + o, center.y + radius), radius * 0.16f)
+                    Offset(center.x + o, box.top) to Offset(center.x + o, box.bottom)
                 }
+                drawLine(shade, from, to, size * 0.11f)
+                drawLine(white, from, to, size * 0.07f)
             }
         }
         Special.BOMB -> {
             drawCircle(Color.White.copy(alpha = 0.9f * alpha), radius * 1.08f, center, style = Stroke(radius * 0.14f))
-            drawCircle(Color.White.copy(alpha = 0.9f * alpha), radius * 0.22f, center)
+            drawCircle(Color.White.copy(alpha = 0.9f * alpha), radius * 0.2f, center)
         }
         else -> Unit
     }
 }
 
 private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
-private fun lighten(c: Color) = Color(c.red + (1 - c.red) * 0.45f, c.green + (1 - c.green) * 0.45f, c.blue + (1 - c.blue) * 0.45f, c.alpha)
-private fun darken(c: Color) = Color(c.red * 0.6f, c.green * 0.6f, c.blue * 0.6f, c.alpha)

@@ -122,7 +122,7 @@ class PuzzlerUiTest {
         rule.waitUntilExactlyOneExists(hasAnyAncestor(hasTestTag("tutorial_card")) and hasText("Timer"), 5_000)
         Thread.sleep(2_500)
         rule.onNodeWithTag("time").assertTextEquals("1:00")
-        for (title in listOf("Two limits", "Jelly", "Special gems")) {
+        for (title in listOf("Two limits", "Jelly", "Special items")) {
             rule.onNodeWithTag("tutorial_next").performClick()
             rule.waitUntilExactlyOneExists(hasAnyAncestor(hasTestTag("tutorial_card")) and hasText(title), 5_000)
             Thread.sleep(800)

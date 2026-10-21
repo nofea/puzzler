@@ -41,10 +41,10 @@ class DemoBoardsTest {
             d.newEngine().swap(d.moves.last().a, d.moves.last().b).phases.first { it.kind == PhaseKind.CLEAR }
         }
         assertEquals(listOf(Pattern.LINE3), firstClear("Three in a row clears").patterns)
-        assertEquals(listOf(Special.STRIPED_V), firstClear("Line of 4 makes a striped gem").specialsCreated)
+        assertEquals(listOf(Special.STRIPED_V), firstClear("Line of 4 makes a striped item").specialsCreated)
         assertEquals(listOf(Special.BOMB), firstClear("L or T shape makes a bomb").specialsCreated)
         assertEquals(listOf(Special.COLOR_BOMB), firstClear("Line of 5 makes a color bomb").specialsCreated)
-        assertTrue(firstClear("A matched striped gem clears its row").specialsFired > 0)
+        assertTrue(firstClear("A matched striped item clears its row").specialsFired > 0)
 
         val cascade = demo("Cascade: the second match scores ×1.5").let { it.newEngine().swap(it.moves[0].a, it.moves[0].b) }
         assertTrue("cascade demo has no second step", cascade.maxCascade >= 2)

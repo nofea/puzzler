@@ -61,7 +61,7 @@ object Tutorials {
             ?: pickMove(engine) { r -> r.firstClearPatterns == listOf(Pattern.LINE3) }
             ?: MoveFinder.findMove(engine.board)!!
         return listOf(
-            TutorialStep.GuidedSwap("Make a match", "Swipe to swap these two gems and line up 3 of a kind.", a, b),
+            TutorialStep.GuidedSwap("Make a match", "Swipe to swap these two items and line up 3 of a kind.", a, b),
             TutorialStep.Info(
                 "Score",
                 "Matches score points. Reach 100 to pass the level; score more for ★★ and ★★★.",
@@ -85,21 +85,21 @@ object Tutorials {
             val (a, b, kind) = special
             val (title, text) = when (kind) {
                 Special.STRIPED_H, Special.STRIPED_V ->
-                    "Special gems" to "Line up 4 to make a striped gem. Matched later, it clears its whole row or column. Swipe here!"
-                Special.BOMB -> "Special gems" to "Make an L or T shape to create a bomb. Matched later, it blasts a 3×3 area. Swipe here!"
-                else -> "Special gems" to "Line up 5 to make a color bomb. Swap it with any gem to clear that color. Swipe here!"
+                    "Special items" to "Line up 4 to make a striped item. Matched later, it clears its whole row or column. Swipe here!"
+                Special.BOMB -> "Special items" to "Make an L or T shape to create a bomb. Matched later, it blasts a 3×3 area. Swipe here!"
+                else -> "Special items" to "Line up 5 to make a color bomb. Swap it with any item to clear that color. Swipe here!"
             }
             TutorialStep.GuidedSwap(title, text, a, b)
         } else {
             TutorialStep.Info(
-                "Special gems",
-                "Line up 4, an L or T shape, or 5 in a row to make special gems. See How to play → Specials for what each one does.",
+                "Special items",
+                "Line up 4, an L or T shape, or 5 in a row to make special items. See How to play → Specials for what each one does.",
             )
         }
         return listOf(
             TutorialStep.Info("Timer", "This level has a timer. It starts when this tutorial ends.", Target.Hud(HudTarget.TIME)),
             TutorialStep.Info("Two limits", "Run out of moves or time and the level ends. 100 points still passes.", Target.Hud(HudTarget.MOVES)),
-            TutorialStep.Info("Jelly", "Pink cells are jelly. Clear the gem on top to clear the jelly for +2.", Target.Cells(jelly)),
+            TutorialStep.Info("Jelly", "Pink cells are jelly. Clear the item on top to clear the jelly for +2.", Target.Cells(jelly)),
             specialStep,
         )
     }

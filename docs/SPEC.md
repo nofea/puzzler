@@ -6,7 +6,7 @@ Puzzler is a Candy‑Crush‑style match‑3 game for Android. It has 10 levels,
 | Topic | Decision |
 |---|---|
 | Name | **Puzzler** |
-| Pieces | Gems with a distinct shape and color per type (colorblind‑friendly). The color bomb is a near‑black orb ringed by the six mini gem shapes, with a gold sparkle core (same design as the app icon) |
+| Pieces | Six items in the six piece colors: fries (red), burger (orange), pizza (yellow), potted plant (green), soda can (blue), chocolate bar (purple). Shape and color both identify an item (colorblind‑friendly). The color bomb is a near‑black orb ringed by mini versions of the six items, with a gold sparkle core (same design as the app icon). See §7 |
 | App icon | The color bomb on a purple radial glow, with a monochrome version for themed icons. See §5 |
 | Launch | Splash, then a ~2 s color‑bomb intro (assemble → detonate) on cold start; tap to skip. See §4 |
 | Tutorials | A How to play page (from the map, Settings and in‑level "?") and guided in‑level tutorials in L1 and L6, shown once. See §6 |
@@ -63,9 +63,9 @@ Balance: cascades make 100 points come quickly. A random player passes about 100
 
 ## 4. Screens and feedback
 - **Launch intro**: the app opens on a splash of the color bomb's orb and sparkle on the dark purple background. The intro then plays (about 2 s):
-  1. **Assemble (0–0.8 s):** the six gems fly in from off‑screen and lock into their ring around the orb, one by one, with a tick as each lands.
+  1. **Assemble (0–0.8 s):** the six items fly in from off‑screen and lock into their ring around the orb, one by one, with a tick as each lands.
   2. **Title (0.8 s):** the sparkle flashes, and "PUZZLER" (rounded display font, gold) fades in under the bomb, followed by the tagline "Match. Cascade. Detonate.".
-  3. **Detonate (1.3 s):** the bomb detonates with a boom and a strong vibration, and the gems burst outward off‑screen.
+  3. **Detonate (1.3 s):** the bomb detonates with a boom and a strong vibration, and the items burst outward off‑screen.
   4. **Reveal (1.3–2.0 s):** a circle expanding from the bomb's center uncovers the level map.
   - Tapping during the intro jumps straight to the detonation.
   - The intro plays only when the app starts fresh, not when returning from the background.
@@ -86,18 +86,18 @@ The launcher icon is the game's **color bomb**, the one piece that is unique to 
 
 | Topic | Decision |
 |---|---|
-| Subject | Color bomb: one orb ringed by the six gems |
-| Style | Flat and minimal: solid fills, no gradients on the subject |
+| Subject | Color bomb: one orb ringed by the six items |
+| Style | Flat orb and sparkle; the mini items use the item artwork (§7) |
 | Orb | Near‑black `#140A26` |
-| Ring | The six gems as mini versions of their in‑game shape and color (red circle, orange rounded square, yellow diamond, green triangle, blue hexagon, purple star), evenly spaced, starting at the top and going clockwise in that order |
+| Ring | Mini versions of the six items (fries, burger, pizza, potted plant, soda can, chocolate bar), evenly spaced, starting at the top and going clockwise in that order |
 | Center | Gold four‑point sparkle `#FFD34D` |
 | Background | Purple radial glow: `#3A2470` at the center fading to `#1B1035` at the edges |
-| Themed icon | Monochrome version: the orb silhouette with the gems and sparkle cut out |
+| Themed icon | Monochrome version: the orb silhouette with the items and sparkle cut out |
 | In‑game | The color bomb on the board uses the same design and proportions |
 
 Proportions (on the 108‑unit adaptive icon canvas, everything inside the central 66‑unit safe zone):
 - Orb radius 26.
-- Gem centers on a ring of radius 0.6 × orb; each gem radius 0.19 × orb, with each shape's proportions matching the in‑game gems.
+- Item centers on a ring of radius 0.6 × orb; each mini item fills a square of side 0.42 × orb.
 - Sparkle outer radius 0.23 × orb; inner radius 0.3 × outer.
 
 ## 6. Tutorials
@@ -109,24 +109,41 @@ The page is six swipeable cards, with page dots, Previous/Next, and Done on the 
 
 | Card | Explains | Demo(s) |
 |---|---|---|
-| Basics | Swap neighbors; match 3+ across or down; a non‑matching swap bounces back for free; gems fall and refill; a dead board shuffles for free | A swap bouncing back; three in a row clearing |
+| Basics | Swap neighbors; match 3+ across or down; a non‑matching swap bounces back for free; items fall and refill; a dead board shuffles for free | A swap bouncing back; three in a row clearing |
 | Scoring | The points table (line of 3/4/5, L/T, special clears, jelly, stone) and cascade multipliers ×1, ×1.5, ×2 … | A cascade whose second match scores ×1.5 |
-| Specials | Line of 4 → striped, L/T → bomb, line of 5 → color bomb; specials fire when matched or hit, so they chain | Each special being made, and a striped gem clearing its row |
-| Combos | Every special + special swap, and color bomb + gem | Striped + bomb; color bomb + gem |
-| Obstacles | Jelly, stones (dark ones take two hits), chained gems | One match that clears jelly, breaks a stone and frees a chained gem |
+| Specials | Line of 4 → striped, L/T → bomb, line of 5 → color bomb; specials fire when matched or hit, so they chain | Each special being made, and a striped item clearing its row |
+| Combos | Every special + special swap, and color bomb + item | Striped + bomb; color bomb + item |
+| Obstacles | Jelly, stones (dark ones take two hits), chained items | One match that clears jelly, breaks a stone and frees a chained item |
 | Limits & stars | Moves, the timer on L6–10, either running out ends the level, 100 to pass, ★★/★★★, Finish | Three in a row using a move |
 
 ### In‑level tutorials
 Level 1 and level 6 have a tutorial the first time they're played. It's remembered on the device, and "Reset progress" brings it back. The screen is dimmed except for a pulsing gold spotlight on what the step is about. A card next to the spotlight shows the step's title and text, a step counter, **Skip tutorial**, and **Next** (or **Got it** on the last step). Skip ends the tutorial and counts as seen.
 
-- **Guided swap:** the two gems to swap are spotlighted, and a fingertip animation swipes between them. Only that swap is accepted; every other touch is ignored and costs nothing. The step ends once the swap has played out.
+- **Guided swap:** the two items to swap are spotlighted, and a fingertip animation swipes between them. Only that swap is accepted; every other touch is ignored and costs nothing. The step ends once the swap has played out.
 - **Level 1:**
-  1. *Make a match* (guided swap that lines up 3): "Swipe to swap these two gems and line up 3 of a kind."
+  1. *Make a match* (guided swap that lines up 3): "Swipe to swap these two items and line up 3 of a kind."
   2. *Score* (spotlight on the score, bar and stars): "Matches score points. Reach 100 to pass the level; score more for ★★ and ★★★."
   3. *Moves* (spotlight on Moves): "Every swap uses a move. When moves run out, the level ends." Free play follows.
   4. *Level passed!* When the score first reaches 100, the Finish button is spotlighted: "You've passed! Tap Finish to bank your stars, or keep playing for a higher score." Tapping Finish there finishes the level.
 - **Level 6** (the timer doesn't start until the tutorial ends):
   1. *Timer* (spotlight on the clock): "This level has a timer. It starts when this tutorial ends."
   2. *Two limits* (spotlight on Moves): "Run out of moves or time and the level ends. 100 points still passes."
-  3. *Jelly* (spotlight on the jelly cells): "Pink cells are jelly. Clear the gem on top to clear the jelly for +2."
-  4. *Special gems:* a guided swap that makes a special, if the starting board has one; its text names the special it makes. Otherwise it's a card explaining how to make specials, pointing to How to play → Specials. Level 6's board starts without one, so it shows the card.
+  3. *Jelly* (spotlight on the jelly cells): "Pink cells are jelly. Clear the item on top to clear the jelly for +2."
+  4. *Special items:* a guided swap that makes a special, if the starting board has one; its text names the special it makes. Otherwise it's a card explaining how to make specials, pointing to How to play → Specials. Level 6's board starts without one, so it shows the card.
+
+## 7. Items
+The six pieces are everyday items: snacks and a houseplant. Each is recolored so its dominant color is its piece color, so color and shape both tell items apart at a glance.
+
+| Color | Item | Recolor |
+|---|---|---|
+| Red | Fries | none: red carton, golden fries |
+| Orange | Burger | none: orange bun |
+| Yellow | Pizza slice | cheese made yellow; crust and pepperoni unchanged |
+| Green | Potted plant | the orange pot becomes green, a step lighter and darker than the leaves |
+| Blue | Soda can | adapted from a canned‑food tin: blue body, the food label replaced by a light‑blue panel with a white rim, stripe and logo dot, and a pull tab on the lid |
+| Purple | Chocolate bar | wrapper made purple; the chocolate stays brown |
+
+- **Look:** items sit directly on the board tiles with a soft drop shadow. There's no glossy gem shading.
+- **Specials:** a striped item shows three white stripes across it (horizontal or vertical, matching the direction it clears). A bomb item has a white ring around it and a white dot in its center. A color bomb is the near‑black orb ringed by the six mini items with a gold sparkle core.
+- **Everywhere:** the same items appear on the board, in How to play, in the launch intro (they fly into the ring) and on the app icon.
+- **Art credit:** based on Google's Noto Emoji artwork (🍟 🍔 🍕 🪴 🥫 🍫), recolored and adapted.
