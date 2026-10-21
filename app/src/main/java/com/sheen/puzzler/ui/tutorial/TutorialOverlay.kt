@@ -59,7 +59,10 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sign
 
-private fun union(a: Rect, b: Rect) = Rect(minOf(a.left, b.left), minOf(a.top, b.top), maxOf(a.right, b.right), maxOf(a.bottom, b.bottom))
+private fun union(
+    a: Rect,
+    b: Rect,
+) = Rect(minOf(a.left, b.left), minOf(a.top, b.top), maxOf(a.right, b.right), maxOf(a.bottom, b.bottom))
 
 /** Key under which the game board's bounds are registered with [tutorialTarget]. */
 const val BOARD_TARGET = "board"
@@ -67,8 +70,10 @@ const val BOARD_TARGET = "board"
 fun HudTarget.key() = name.lowercase()
 
 /** Records this element's bounds (root coordinates) under [key], so the tutorial overlay can spotlight it. */
-fun Modifier.tutorialTarget(key: String, targets: MutableMap<String, Rect>) =
-    onGloballyPositioned { coords: LayoutCoordinates -> targets[key] = coords.boundsInRoot() }
+fun Modifier.tutorialTarget(
+    key: String,
+    targets: MutableMap<String, Rect>,
+) = onGloballyPositioned { coords: LayoutCoordinates -> targets[key] = coords.boundsInRoot() }
 
 /**
  * Dims the game screen except the current step's target, shows the step's callout, and for a guided swap animates a
@@ -79,7 +84,6 @@ fun Modifier.tutorialTarget(key: String, targets: MutableMap<String, Rect>) =
 fun TutorialOverlay(
     tutorial: TutorialState,
     targets: Map<String, Rect>,
-    rows: Int,
     cols: Int,
     onNext: () -> Unit,
     onSkip: () -> Unit,
@@ -99,13 +103,21 @@ fun TutorialOverlay(
     // Geometry in overlay coordinates.
     val board = targets[BOARD_TARGET]?.translate(-origin)
     val cell = board?.let { it.width / cols } ?: 0f
-    fun cellRect(p: Pos) = Rect(board!!.left + p.col * cell, board.top + p.row * cell, board.left + (p.col + 1) * cell, board.top + (p.row + 1) * cell)
+
+    fun cellRect(p: Pos) =
+        Rect(
+            board!!.left + p.col * cell,
+            board.top + p.row * cell,
+            board.left + (p.col + 1) * cell,
+            board.top + (p.row + 1) * cell,
+        )
     val pad = with(density) { 6.dp.toPx() }
-    val holes: List<Rect> = when (val target = step.target) {
-        is Target.Hud -> listOfNotNull(targets[target.key.key()]?.translate(-origin)?.inflate(pad))
-        is Target.Cells -> if (board == null) emptyList() else target.cells.map { cellRect(it).inflate(-cell * 0.03f) }
-        Target.None -> emptyList()
-    }
+    val holes: List<Rect> =
+        when (val target = step.target) {
+            is Target.Hud -> listOfNotNull(targets[target.key.key()]?.translate(-origin)?.inflate(pad))
+            is Target.Cells -> if (board == null) emptyList() else target.cells.map { cellRect(it).inflate(-cell * 0.03f) }
+            Target.None -> emptyList()
+        }
     val finishHole = (step.target as? Target.Hud)?.takeIf { it.key == HudTarget.FINISH }?.let { holes.firstOrNull() }
     val guided = step as? TutorialStep.GuidedSwap
 
@@ -125,9 +137,12 @@ fun TutorialOverlay(
                     awaitEachGesture {
                         val down = awaitFirstDown()
                         down.consume()
-                        val start = board?.takeIf { guided != null && it.contains(down.position) }?.let {
-                            Pos(((down.position.y - it.top) / cell).toInt(), ((down.position.x - it.left) / cell).toInt())
-                        }?.takeIf { it == guided!!.a || it == guided.b }
+                        val start =
+                            board
+                                ?.takeIf { guided != null && it.contains(down.position) }
+                                ?.let {
+                                    Pos(((down.position.y - it.top) / cell).toInt(), ((down.position.x - it.left) / cell).toInt())
+                                }?.takeIf { it == guided!!.a || it == guided.b }
                         var swiped = false
                         while (true) {
                             val event = awaitPointerEvent()
@@ -138,9 +153,14 @@ fun TutorialOverlay(
                                 break
                             }
                             val d = change.position - down.position
-                            if (start != null && !swiped && (abs(d.x) > cell * 0.35f || abs(d.y) > cell * 0.35f)) {
-                                val target = if (abs(d.x) > abs(d.y)) Pos(start.row, start.col + d.x.sign.toInt())
-                                else Pos(start.row + d.y.sign.toInt(), start.col)
+                            val dragged = abs(d.x) > cell * 0.35f || abs(d.y) > cell * 0.35f
+                            if (start != null && !swiped && dragged) {
+                                val target =
+                                    if (abs(d.x) > abs(d.y)) {
+                                        Pos(start.row, start.col + d.x.sign.toInt())
+                                    } else {
+                                        Pos(start.row + d.y.sign.toInt(), start.col)
+                                    }
                                 onSwipe(start, target)
                                 swiped = true
                             }
@@ -148,9 +168,10 @@ fun TutorialOverlay(
                     }
                 },
         ) {
-            val dim = Path().apply {
-                holes.forEach { addRoundRect(RoundRect(it, CornerRadius(12.dp.toPx()))) }
-            }
+            val dim =
+                Path().apply {
+                    holes.forEach { addRoundRect(RoundRect(it, CornerRadius(12.dp.toPx()))) }
+                }
             clipPath(dim, ClipOp.Difference) {
                 drawRect(Color.Black.copy(alpha = 0.6f))
             }
@@ -173,24 +194,26 @@ fun TutorialOverlay(
         val focus = holes.reduceOrNull(::union)
         val avoid = if (step.target is Target.Cells && board != null && focus != null) union(board, focus) else focus
         val gap = with(density) { 16.dp.toPx() }
-        val cardTop = when {
-            avoid == null || focus == null -> (overlayHeight - cardHeight) / 2f
-            overlayHeight - avoid.bottom >= cardHeight + 2 * gap -> avoid.bottom + gap
-            avoid.top >= cardHeight + 2 * gap -> avoid.top - gap - cardHeight
-            focus.center.y > overlayHeight / 2f -> focus.top - gap - cardHeight
-            else -> focus.bottom + gap
-        }.coerceIn(0f, (overlayHeight - cardHeight).coerceAtLeast(0).toFloat())
+        val cardTop =
+            when {
+                avoid == null || focus == null -> (overlayHeight - cardHeight) / 2f
+                overlayHeight - avoid.bottom >= cardHeight + 2 * gap -> avoid.bottom + gap
+                avoid.top >= cardHeight + 2 * gap -> avoid.top - gap - cardHeight
+                focus.center.y > overlayHeight / 2f -> focus.top - gap - cardHeight
+                else -> focus.bottom + gap
+            }.coerceIn(0f, (overlayHeight - cardHeight).coerceAtLeast(0).toFloat())
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = PuzzlerColors.surface,
             tonalElevation = 6.dp,
             shadowElevation = 8.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .offset { IntOffset(0, cardTop.roundToInt()) }
-                .onSizeChanged { cardHeight = it.height }
-                .testTag("tutorial_card"),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .offset { IntOffset(0, cardTop.roundToInt()) }
+                    .onSizeChanged { cardHeight = it.height }
+                    .testTag("tutorial_card"),
         ) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

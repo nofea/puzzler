@@ -15,13 +15,19 @@ import kotlin.math.sin
  * One loop of the swipe hint, [t] in 0..1: a fingertip presses on [from], slides to [to] leaving a trail, holds, and
  * fades. A faint arrow shows the direction throughout. [cell] is the board cell size in px.
  */
-internal fun DrawScope.drawSwipeHint(from: Offset, to: Offset, t: Float, cell: Float) {
+internal fun DrawScope.drawSwipeHint(
+    from: Offset,
+    to: Offset,
+    t: Float,
+    cell: Float,
+) {
     val slide = FastOutSlowInEasing.transform(((t - 0.15f) / 0.45f).coerceIn(0f, 1f))
-    val alpha = when {
-        t < 0.15f -> t / 0.15f
-        t > 0.8f -> ((1f - t) / 0.2f).coerceAtLeast(0f)
-        else -> 1f
-    }
+    val alpha =
+        when {
+            t < 0.15f -> t / 0.15f
+            t > 0.8f -> ((1f - t) / 0.2f).coerceAtLeast(0f)
+            else -> 1f
+        }
     val tip = lerp(from, to, slide)
 
     // Direction arrow.

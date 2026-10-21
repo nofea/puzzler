@@ -21,15 +21,10 @@ data class LevelDef(
 ) {
     val timed get() = timeSeconds > 0
 
-    fun stars(score: Int): Int = when {
-        score >= star3 -> 3
-        score >= star2 -> 2
-        score >= target -> 1
-        else -> 0
-    }
+    /** Stars earned: one for each threshold (pass, 2★, 3★) the score reaches. */
+    fun stars(score: Int): Int = listOf(target, star2, star3).count { score >= it }
 
-    fun newEngine(seed: Long = this.seed) =
-        GameEngine(Board.fromLayout(layout, colors, Random(seed)), moves)
+    fun newEngine(seed: Long = this.seed) = GameEngine(Board.fromLayout(layout, colors, Random(seed)), moves)
 
     companion object {
         const val PASS_SCORE = 100
@@ -37,7 +32,9 @@ data class LevelDef(
 }
 
 @Serializable
-data class LevelPack(val levels: List<LevelDef>)
+data class LevelPack(
+    val levels: List<LevelDef>,
+)
 
 object LevelParser {
     private val json = Json { ignoreUnknownKeys = true }

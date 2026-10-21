@@ -5,14 +5,22 @@ package com.sheen.puzzler.engine
  * Cells shadowed by stones, holes or locked pieces are filled by a diagonal slide from a neighbor column.
  */
 object Gravity {
-
     /** Topmost playable cell of a column (only holes above it); new pieces appear here. */
-    fun isSpawner(board: Board, pos: Pos): Boolean =
-        board[pos].isPlayable && (0 until pos.row).all { !board[it, pos.col].exists }
+    fun isSpawner(
+        board: Board,
+        pos: Pos,
+    ): Boolean = board[pos].isPlayable && (0 until pos.row).all { !board[it, pos.col].exists }
 
-    private fun isEmpty(board: Board, pos: Pos) = board[pos].isPlayable && board[pos].piece == null
+    private fun isEmpty(
+        board: Board,
+        pos: Pos,
+    ) = board[pos].isPlayable && board[pos].piece == null
 
-    private fun move(board: Board, from: Pos, to: Pos) {
+    private fun move(
+        board: Board,
+        from: Pos,
+        to: Pos,
+    ) {
         val piece = board[from].piece
         board[from] = board[from].copy(piece = null)
         board[to] = board[to].copy(piece = piece)
@@ -34,48 +42,54 @@ object Gravity {
         }
     }
 
+    /**
+     * Fills empty cells from directly above and spawns at column tops, repeating until nothing changes. Columns are
+     * scanned left to right, each bottom-up; the order decides which piece falls where, so it must stay fixed.
+     */
     private fun verticalPass(board: Board): Boolean {
+        val order = (0 until board.cols).flatMap { c -> (board.rows - 1 downTo 0).map { r -> Pos(r, c) } }
         var changed = false
-        var progress = true
-        while (progress) {
-            progress = false
-            for (c in 0 until board.cols) {
-                for (r in board.rows - 1 downTo 0) {
-                    val pos = Pos(r, c)
-                    if (!isEmpty(board, pos)) continue
-                    if (r > 0 && board[r - 1, c].isMovable) {
-                        move(board, Pos(r - 1, c), pos)
-                        progress = true
-                    } else if (isSpawner(board, pos)) {
-                        board[pos] = board[pos].copy(piece = board.randomPiece())
-                        progress = true
-                    }
-                }
+        do {
+            var progress = false
+            for (pos in order) {
+                if (fillVertically(board, pos)) progress = true
             }
             changed = changed || progress
-        }
+        } while (progress)
         return changed
     }
 
-    /** One diagonal slide into the lowest empty cell that can't be filled from directly above. */
-    private fun diagonalStep(board: Board): Boolean {
-        for (r in board.rows - 1 downTo 1) {
-            for (c in 0 until board.cols) {
-                val pos = Pos(r, c)
-                if (!isEmpty(board, pos) || isSpawner(board, pos)) continue
-                val above = Pos(r - 1, c)
-                if (isEmpty(board, above)) continue // will be fed vertically
-                // Alternate preference by column so slides don't all lean one way.
-                val sides = if (c % 2 == 0) listOf(-1, 1) else listOf(1, -1)
-                for (dc in sides) {
-                    val from = Pos(r - 1, c + dc)
-                    if (board.inBounds(from) && board[from].isMovable) {
-                        move(board, from, pos)
-                        return true
-                    }
-                }
-            }
+    /** Fills [pos] from the cell above it, or with a new piece at the top of a column. True if it filled. */
+    private fun fillVertically(
+        board: Board,
+        pos: Pos,
+    ): Boolean {
+        if (!isEmpty(board, pos)) return false
+        val above = Pos(pos.row - 1, pos.col)
+        when {
+            pos.row > 0 && board[above].isMovable -> move(board, above, pos)
+            isSpawner(board, pos) -> board[pos] = board[pos].copy(piece = board.randomPiece())
+            else -> return false
         }
-        return false
+        return true
+    }
+
+    /** One diagonal slide into the lowest empty cell that can't be filled from directly above. */
+    private fun diagonalStep(board: Board): Boolean =
+        (board.rows - 1 downTo 1).any { r -> (0 until board.cols).any { c -> slideDiagonally(board, Pos(r, c)) } }
+
+    private fun slideDiagonally(
+        board: Board,
+        pos: Pos,
+    ): Boolean {
+        if (!isEmpty(board, pos) || isSpawner(board, pos)) return false
+        if (isEmpty(board, Pos(pos.row - 1, pos.col))) return false // will be fed vertically
+        // Alternate preference by column so slides don't all lean one way.
+        val sides = if (pos.col % 2 == 0) listOf(-1, 1) else listOf(1, -1)
+        val from =
+            sides.map { Pos(pos.row - 1, pos.col + it) }.firstOrNull { board.inBounds(it) && board[it].isMovable }
+                ?: return false
+        move(board, from, pos)
+        return true
     }
 }

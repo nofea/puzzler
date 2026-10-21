@@ -7,7 +7,6 @@ import org.junit.Test
 import kotlin.random.Random
 
 class GravityTest {
-
     private fun allFilled(board: Board) = board.positions().all { !board[it].isPlayable || board[it].piece != null }
 
     @Test

@@ -30,7 +30,11 @@ import com.sheen.puzzler.data.ProgressRepository
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(progressRepo: ProgressRepository, onBack: () -> Unit, onRules: () -> Unit) {
+fun SettingsScreen(
+    progressRepo: ProgressRepository,
+    onBack: () -> Unit,
+    onRules: () -> Unit,
+) {
     val progress by progressRepo.progress.collectAsState(initial = Progress())
     val scope = rememberCoroutineScope()
     var confirmReset by remember { mutableStateOf(false) }
@@ -43,7 +47,11 @@ fun SettingsScreen(progressRepo: ProgressRepository, onBack: () -> Unit, onRules
         SettingRow("Sound", !progress.muted, "sound_switch") { on -> scope.launch { progressRepo.setMuted(!on) } }
         SettingRow("Vibration", progress.haptics, "haptics_switch") { on -> scope.launch { progressRepo.setHaptics(on) } }
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onRules).padding(vertical = 12.dp).testTag("settings_how_to_play"),
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onRules)
+                .padding(vertical = 12.dp)
+                .testTag("settings_how_to_play"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("How to play", fontSize = 18.sp, modifier = Modifier.weight(1f))
@@ -70,7 +78,12 @@ fun SettingsScreen(progressRepo: ProgressRepository, onBack: () -> Unit, onRules
 }
 
 @Composable
-private fun SettingRow(label: String, checked: Boolean, tag: String, onChange: (Boolean) -> Unit) {
+private fun SettingRow(
+    label: String,
+    checked: Boolean,
+    tag: String,
+    onChange: (Boolean) -> Unit,
+) {
     Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, fontSize = 18.sp, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onChange, modifier = Modifier.testTag(tag))

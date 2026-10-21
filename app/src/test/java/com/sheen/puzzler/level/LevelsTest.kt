@@ -11,7 +11,6 @@ import java.io.File
 import kotlin.random.Random
 
 class LevelsTest {
-
     // Unit tests run with the module directory as working directory.
     private val levels = LevelParser.parse(File("src/main/assets/levels.json").readText())
 
@@ -55,15 +54,19 @@ class LevelsTest {
     }
 
     /** Plays the move that scores most right now (simulated on a copy), until moves run out. */
-    private fun greedyScore(level: LevelDef, seed: Long): Int {
+    private fun greedyScore(
+        level: LevelDef,
+        seed: Long,
+    ): Int {
         val engine = level.newEngine(seed)
         val rng = Random(seed)
         while (engine.canMove) {
             val moves = MoveFinder.allMoves(engine.board)
-            val best = moves.maxBy { (a, b) ->
-                val sim = GameEngine(engine.board.copy(Random(rng.nextLong())), 1)
-                sim.swap(a, b).scoreDelta
-            }
+            val best =
+                moves.maxBy { (a, b) ->
+                    val sim = GameEngine(engine.board.copy(Random(rng.nextLong())), 1)
+                    sim.swap(a, b).scoreDelta
+                }
             engine.swap(best.first, best.second)
         }
         return engine.score
@@ -72,10 +75,11 @@ class LevelsTest {
     @Test
     fun `a greedy player can pass every level most of the time`() {
         val seeds = 10
-        val report = levels.map { level ->
-            val scores = (1..seeds).map { greedyScore(level, it * 7919L) }
-            Triple(level.id, scores.count { it >= level.target }, scores.average())
-        }
+        val report =
+            levels.map { level ->
+                val scores = (1..seeds).map { greedyScore(level, it * 7919L) }
+                Triple(level.id, scores.count { it >= level.target }, scores.average())
+            }
         report.forEach { (id, wins, avg) -> println("level $id: $wins/$seeds passed, avg score ${"%.0f".format(avg)}") }
         report.forEach { (id, wins, _) -> assertTrue("level $id passed only $wins/$seeds", wins >= seeds * 6 / 10) }
     }

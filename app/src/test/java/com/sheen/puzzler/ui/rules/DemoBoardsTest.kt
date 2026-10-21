@@ -11,7 +11,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DemoBoardsTest {
-
     private val demos = Rules.cards.flatMap { card -> card.demos.map { card.title to it } }
 
     // The basic line-of-3 demo appears on two cards, so take the first.
@@ -37,9 +36,14 @@ class DemoBoardsTest {
 
     @Test
     fun `demos show what their captions say`() {
-        fun firstClear(caption: String) = demo(caption).let { d ->
-            d.newEngine().swap(d.moves.last().a, d.moves.last().b).phases.first { it.kind == PhaseKind.CLEAR }
-        }
+        fun firstClear(caption: String) =
+            demo(caption).let { d ->
+                d
+                    .newEngine()
+                    .swap(d.moves.last().a, d.moves.last().b)
+                    .phases
+                    .first { it.kind == PhaseKind.CLEAR }
+            }
         assertEquals(listOf(Pattern.LINE3), firstClear("Three in a row clears").patterns)
         assertEquals(listOf(Special.STRIPED_V), firstClear("Line of 4 makes a striped item").specialsCreated)
         assertEquals(listOf(Special.BOMB), firstClear("L or T shape makes a bomb").specialsCreated)
@@ -49,11 +53,12 @@ class DemoBoardsTest {
         val cascade = demo("Cascade: the second match scores ×1.5").let { it.newEngine().swap(it.moves[0].a, it.moves[0].b) }
         assertTrue("cascade demo has no second step", cascade.maxCascade >= 2)
 
-        val obstacles = demo("Jelly clears, the stone breaks, the chain comes off").let { d ->
-            val engine = d.newEngine()
-            engine.swap(d.moves[0].a, d.moves[0].b)
-            engine.board
-        }
+        val obstacles =
+            demo("Jelly clears, the stone breaks, the chain comes off").let { d ->
+                val engine = d.newEngine()
+                engine.swap(d.moves[0].a, d.moves[0].b)
+                engine.board
+            }
         assertEquals(0, obstacles.stoneCount())
         assertEquals(0, obstacles.lockedCount())
         assertEquals(0, obstacles.jellyCount())

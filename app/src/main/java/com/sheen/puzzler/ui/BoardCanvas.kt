@@ -81,11 +81,12 @@ fun BoardCanvas(
                         if (!change.pressed) break
                         val d = change.position - down.position
                         if (!swiped && (abs(d.x) > cellPx * 0.35f || abs(d.y) > cellPx * 0.35f)) {
-                            val target = if (abs(d.x) > abs(d.y)) {
-                                Pos(start.row, start.col + d.x.sign.toInt())
-                            } else {
-                                Pos(start.row + d.y.sign.toInt(), start.col)
-                            }
+                            val target =
+                                if (abs(d.x) > abs(d.y)) {
+                                    Pos(start.row, start.col + d.x.sign.toInt())
+                                } else {
+                                    Pos(start.row + d.y.sign.toInt(), start.col)
+                                }
                             swipe(start, target)
                             swiped = true
                         }
@@ -98,7 +99,7 @@ fun BoardCanvas(
         val t = progress.value
         val cell = size.width / cols
         drawTiles(current, previous, t, cell)
-        drawPieces(images, previous, current, phaseKind, t, cell)
+        drawPieces(images, spritesAt(previous, current, phaseKind, t), cell)
         drawOverlays(previous, current, t, cell)
         if (selected != null) {
             drawRoundRect(
@@ -112,7 +113,12 @@ fun BoardCanvas(
     }
 }
 
-private fun DrawScope.drawTiles(current: BoardSnapshot, previous: BoardSnapshot, t: Float, cell: Float) {
+private fun DrawScope.drawTiles(
+    current: BoardSnapshot,
+    previous: BoardSnapshot,
+    t: Float,
+    cell: Float,
+) {
     for (pos in current.positions()) {
         val c = current[pos]
         if (!c.exists) continue
@@ -120,11 +126,12 @@ private fun DrawScope.drawTiles(current: BoardSnapshot, previous: BoardSnapshot,
         val tile = if ((pos.row + pos.col) % 2 == 0) PuzzlerColors.tileLight else PuzzlerColors.tileDark
         drawRect(tile, topLeft, Size(cell, cell))
         val hadJelly = previous.rows == current.rows && previous[pos].jelly
-        val jellyAlpha = when {
-            c.jelly -> 1f
-            hadJelly -> 1f - t
-            else -> 0f
-        }
+        val jellyAlpha =
+            when {
+                c.jelly -> 1f
+                hadJelly -> 1f - t
+                else -> 0f
+            }
         if (jellyAlpha > 0f) {
             drawRoundRect(
                 PuzzlerColors.jelly.copy(alpha = PuzzlerColors.jelly.alpha * jellyAlpha),
@@ -136,57 +143,100 @@ private fun DrawScope.drawTiles(current: BoardSnapshot, previous: BoardSnapshot,
     }
 }
 
-private fun DrawScope.drawPieces(images: List<ImageBitmap>, previous: BoardSnapshot, current: BoardSnapshot, kind: PhaseKind?, t: Float, cell: Float) {
-    val prevPos = HashMap<Long, Pos>()
-    val prevPiece = HashMap<Long, Piece>()
-    if (previous.rows == current.rows && previous.cols == current.cols) {
-        for (pos in previous.positions()) previous[pos].piece?.let { prevPos[it.id] = pos; prevPiece[it.id] = it }
-    }
+/** A piece placed for one animation frame, in cell units. [scale] multiplies the piece size. */
+private class Sprite(
+    val piece: Piece,
+    val row: Float,
+    val col: Float,
+    val scale: Float = 1f,
+    val alpha: Float = 1f,
+)
+
+/**
+ * Where every piece is at time [t] of a phase going from [previous] to [current]: pieces matched by id slide between
+ * cells, new pieces drop in from above the board (or pop in, for a special made in place), and cleared pieces shrink
+ * and fade where they were.
+ */
+private fun spritesAt(
+    previous: BoardSnapshot,
+    current: BoardSnapshot,
+    kind: PhaseKind?,
+    t: Float,
+): List<Sprite> {
+    val before = if (previous.rows == current.rows && previous.cols == current.cols) placedById(previous) else emptyMap()
     // Count new pieces per column so a refill drops in as a stack from above the board.
     val newInColumn = IntArray(current.cols)
-    val currentIds = HashSet<Long>()
-    for (pos in current.positions()) {
-        val piece = current[pos].piece ?: continue
-        currentIds += piece.id
-        if (piece.id !in prevPos) newInColumn[pos.col]++
-    }
+    for ((pos, piece) in placed(current)) if (piece.id !in before) newInColumn[pos.col]++
 
-    for (pos in current.positions()) {
-        val piece = current[pos].piece ?: continue
-        val from = prevPos[piece.id]
-        var scale = 1f
-        val (row, col) = when {
-            from != null -> lerp(from.row.toFloat(), pos.row.toFloat(), t) to lerp(from.col.toFloat(), pos.col.toFloat(), t)
-            kind == PhaseKind.FALL -> lerp((pos.row - newInColumn[pos.col]).toFloat(), pos.row.toFloat(), t) to pos.col.toFloat()
-            else -> {
-                scale = 0.4f + 0.6f * t // a new special pops in where it was made
-                pos.row.toFloat() to pos.col.toFloat()
+    val sprites =
+        placed(current).map { (pos, piece) ->
+            val from = before[piece.id]?.first
+            when {
+                from != null -> {
+                    Sprite(
+                        piece,
+                        lerp(from.row.toFloat(), pos.row.toFloat(), t),
+                        lerp(from.col.toFloat(), pos.col.toFloat(), t),
+                    )
+                }
+
+                kind == PhaseKind.FALL -> {
+                    Sprite(
+                        piece,
+                        lerp((pos.row - newInColumn[pos.col]).toFloat(), pos.row.toFloat(), t),
+                        pos.col.toFloat(),
+                    )
+                }
+
+                else -> {
+                    Sprite(piece, pos.row.toFloat(), pos.col.toFloat(), scale = 0.4f + 0.6f * t)
+                } // a new special pops in
             }
         }
-        if (row < -0.5f) continue // still above the board
-        drawPiece(images, piece, Offset((col + 0.5f) * cell, (row + 0.5f) * cell), cell * 0.40f * scale, 1f)
-    }
+    if (t >= 1f) return sprites
+    val currentIds = placed(current).mapTo(HashSet()) { it.second.id }
+    val shrink = 1f - t
+    val cleared =
+        before.values
+            .filter { (_, piece) -> piece.id !in currentIds }
+            .map { (pos, piece) -> Sprite(piece, pos.row.toFloat(), pos.col.toFloat(), 0.6f + 0.6f * shrink, shrink) }
+    return sprites + cleared
+}
 
-    // Pieces cleared in this phase shrink and fade out.
-    if (t < 1f) {
-        for ((id, pos) in prevPos) {
-            if (id in currentIds) continue
-            val shrink = 1f - t
-            drawPiece(images, prevPiece.getValue(id), Offset((pos.col + 0.5f) * cell, (pos.row + 0.5f) * cell), cell * 0.40f * (0.6f + 0.6f * shrink), shrink)
-        }
+/** Every piece on [board] with its cell. */
+private fun placed(board: BoardSnapshot): List<Pair<Pos, Piece>> =
+    board.positions().mapNotNull { pos -> board[pos].piece?.let { pos to it } }.toList()
+
+private fun placedById(board: BoardSnapshot): Map<Long, Pair<Pos, Piece>> = placed(board).associateBy { it.second.id }
+
+private fun DrawScope.drawPieces(
+    images: List<ImageBitmap>,
+    sprites: List<Sprite>,
+    cell: Float,
+) {
+    for (sprite in sprites) {
+        if (sprite.row < -0.5f) continue // still above the board
+        val center = Offset((sprite.col + 0.5f) * cell, (sprite.row + 0.5f) * cell)
+        drawPiece(images, sprite.piece, center, cell * 0.40f * sprite.scale, sprite.alpha)
     }
 }
 
-private fun DrawScope.drawOverlays(previous: BoardSnapshot, current: BoardSnapshot, t: Float, cell: Float) {
+private fun DrawScope.drawOverlays(
+    previous: BoardSnapshot,
+    current: BoardSnapshot,
+    t: Float,
+    cell: Float,
+) {
     val samePrev = previous.rows == current.rows && previous.cols == current.cols
     for (pos in current.positions()) {
         val c = current[pos]
         val topLeft = Offset(pos.col * cell, pos.row * cell)
-        val hp = when {
-            c.isStone -> c.stoneHp
-            samePrev && previous[pos].isStone -> previous[pos].stoneHp
-            else -> 0
-        }
+        val hp =
+            when {
+                c.isStone -> c.stoneHp
+                samePrev && previous[pos].isStone -> previous[pos].stoneHp
+                else -> 0
+            }
         if (hp > 0) {
             val alpha = if (c.isStone) 1f else 1f - t
             drawStone(topLeft, cell, hp, alpha)
@@ -196,7 +246,12 @@ private fun DrawScope.drawOverlays(previous: BoardSnapshot, current: BoardSnapsh
     }
 }
 
-private fun DrawScope.drawStone(topLeft: Offset, cell: Float, hp: Int, alpha: Float) {
+private fun DrawScope.drawStone(
+    topLeft: Offset,
+    cell: Float,
+    hp: Int,
+    alpha: Float,
+) {
     val inset = cell * 0.05f
     val base = if (hp >= 2) PuzzlerColors.stoneHard else PuzzlerColors.stone
     drawRoundRect(
@@ -213,17 +268,22 @@ private fun DrawScope.drawStone(topLeft: Offset, cell: Float, hp: Int, alpha: Fl
     )
     if (hp == 1) {
         // A crack shows the stone is one hit from breaking.
-        val crack = Path().apply {
-            moveTo(topLeft.x + cell * 0.3f, topLeft.y + cell * 0.15f)
-            lineTo(topLeft.x + cell * 0.5f, topLeft.y + cell * 0.45f)
-            lineTo(topLeft.x + cell * 0.4f, topLeft.y + cell * 0.6f)
-            lineTo(topLeft.x + cell * 0.65f, topLeft.y + cell * 0.85f)
-        }
+        val crack =
+            Path().apply {
+                moveTo(topLeft.x + cell * 0.3f, topLeft.y + cell * 0.15f)
+                lineTo(topLeft.x + cell * 0.5f, topLeft.y + cell * 0.45f)
+                lineTo(topLeft.x + cell * 0.4f, topLeft.y + cell * 0.6f)
+                lineTo(topLeft.x + cell * 0.65f, topLeft.y + cell * 0.85f)
+            }
         drawPath(crack, Color.Black.copy(alpha = 0.5f * alpha), style = Stroke(cell * 0.05f, cap = StrokeCap.Round))
     }
 }
 
-private fun DrawScope.drawLock(topLeft: Offset, cell: Float, alpha: Float) {
+private fun DrawScope.drawLock(
+    topLeft: Offset,
+    cell: Float,
+    alpha: Float,
+) {
     val color = PuzzlerColors.lock.copy(alpha = 0.85f * alpha)
     val w = cell * 0.07f
     val a = cell * 0.12f
@@ -240,7 +300,13 @@ private fun DrawScope.drawLock(topLeft: Offset, cell: Float, alpha: Float) {
 }
 
 /** Draws [piece] centered on [center]; [radius] is about 0.4 of a cell. Specials get their overlay on top. */
-private fun DrawScope.drawPiece(images: List<ImageBitmap>, piece: Piece, center: Offset, radius: Float, alpha: Float) {
+private fun DrawScope.drawPiece(
+    images: List<ImageBitmap>,
+    piece: Piece,
+    center: Offset,
+    radius: Float,
+    alpha: Float,
+) {
     if (piece.special == Special.COLOR_BOMB) {
         // Same design and proportions as the launcher icon (docs/SPEC.md §5).
         drawColorBomb(images, center, radius, alpha)
@@ -252,26 +318,37 @@ private fun DrawScope.drawPiece(images: List<ImageBitmap>, piece: Piece, center:
     val box = RoundRect(Rect(center, size / 2 * 0.86f), CornerRadius(size * 0.2f))
     when (piece.special) {
         // Three white stripes across the item, along the line it clears.
-        Special.STRIPED_H, Special.STRIPED_V -> clipPath(Path().apply { addRoundRect(box) }) {
-            val white = Color.White.copy(alpha = 0.8f * alpha)
-            val shade = Color.Black.copy(alpha = 0.25f * alpha)
-            for (k in -1..1) {
-                val o = k * size * 0.24f
-                val (from, to) = if (piece.special == Special.STRIPED_H) {
-                    Offset(box.left, center.y + o) to Offset(box.right, center.y + o)
-                } else {
-                    Offset(center.x + o, box.top) to Offset(center.x + o, box.bottom)
+        Special.STRIPED_H, Special.STRIPED_V -> {
+            clipPath(Path().apply { addRoundRect(box) }) {
+                val white = Color.White.copy(alpha = 0.8f * alpha)
+                val shade = Color.Black.copy(alpha = 0.25f * alpha)
+                for (k in -1..1) {
+                    val o = k * size * 0.24f
+                    val (from, to) =
+                        if (piece.special == Special.STRIPED_H) {
+                            Offset(box.left, center.y + o) to Offset(box.right, center.y + o)
+                        } else {
+                            Offset(center.x + o, box.top) to Offset(center.x + o, box.bottom)
+                        }
+                    drawLine(shade, from, to, size * 0.11f)
+                    drawLine(white, from, to, size * 0.07f)
                 }
-                drawLine(shade, from, to, size * 0.11f)
-                drawLine(white, from, to, size * 0.07f)
             }
         }
+
         Special.BOMB -> {
             drawCircle(Color.White.copy(alpha = 0.9f * alpha), radius * 1.08f, center, style = Stroke(radius * 0.14f))
             drawCircle(Color.White.copy(alpha = 0.9f * alpha), radius * 0.2f, center)
         }
-        else -> Unit
+
+        else -> {
+            Unit
+        }
     }
 }
 
-private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
+private fun lerp(
+    a: Float,
+    b: Float,
+    t: Float,
+) = a + (b - a) * t

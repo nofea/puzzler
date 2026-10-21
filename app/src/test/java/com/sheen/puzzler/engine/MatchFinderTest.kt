@@ -6,7 +6,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MatchFinderTest {
-
     @Test
     fun `noise board has no matches`() {
         assertFalse(MatchFinder.hasMatch(testBoard()))

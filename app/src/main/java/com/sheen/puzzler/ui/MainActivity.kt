@@ -57,10 +57,11 @@ class MainActivity : ComponentActivity() {
                 val at = IntArray(2).also(icon::getLocationInWindow)
                 // A splash icon without a background is drawn 288dp across, larger than the icon view that hosts it,
                 // and splash_orb.xml puts the orb at radius 26 of its 108-unit canvas.
-                anchor = OrbAnchor(
-                    center = Offset(at[0] + icon.width / 2f, at[1] + icon.height / 2f),
-                    radius = SPLASH_ICON_DP * resources.displayMetrics.density * 26f / 108f,
-                )
+                anchor =
+                    OrbAnchor(
+                        center = Offset(at[0] + icon.width / 2f, at[1] + icon.height / 2f),
+                        radius = SPLASH_ICON_DP * resources.displayMetrics.density * 26f / 108f,
+                    )
                 view.remove()
             }
         }
@@ -83,8 +84,7 @@ class MainActivity : ComponentActivity() {
         const val SPLASH_ICON_DP = 288f
     }
 
-    private fun animationsEnabled() =
-        Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
+    private fun animationsEnabled() = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
 }
 
 @Composable
@@ -103,10 +103,11 @@ fun PuzzlerNav(app: PuzzlerApplication) {
         composable("game/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { entry ->
             val id = entry.arguments!!.getInt("id")
             val level = app.levels.level(id)
-            val vm: GameViewModel = viewModel(
-                key = "game_$id",
-                factory = viewModelFactory { initializer { GameViewModel(level, app.progress) } },
-            )
+            val vm: GameViewModel =
+                viewModel(
+                    key = "game_$id",
+                    factory = viewModelFactory { initializer { GameViewModel(level, app.progress) } },
+                )
             GameScreen(
                 vm = vm,
                 progressRepo = app.progress,

@@ -4,18 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.semantics.contentDescription
-import com.sheen.puzzler.ui.tutorial.BOARD_TARGET
-import com.sheen.puzzler.ui.tutorial.HudTarget
-import com.sheen.puzzler.ui.tutorial.TutorialOverlay
-import com.sheen.puzzler.ui.tutorial.key
-import com.sheen.puzzler.ui.tutorial.tutorialTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -38,12 +29,16 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +52,11 @@ import com.sheen.puzzler.data.ProgressRepository
 import com.sheen.puzzler.fx.Haptics
 import com.sheen.puzzler.fx.Sfx
 import com.sheen.puzzler.fx.SoundPlayer
+import com.sheen.puzzler.ui.tutorial.BOARD_TARGET
+import com.sheen.puzzler.ui.tutorial.HudTarget
+import com.sheen.puzzler.ui.tutorial.TutorialOverlay
+import com.sheen.puzzler.ui.tutorial.key
+import com.sheen.puzzler.ui.tutorial.tutorialTarget
 
 @Composable
 fun GameScreen(
@@ -80,13 +80,14 @@ fun GameScreen(
     // Pause the timer while the app is in the background.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_PAUSE -> vm.setPaused(true)
-                Lifecycle.Event.ON_RESUME -> vm.setPaused(false)
-                else -> Unit
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_PAUSE -> vm.setPaused(true)
+                    Lifecycle.Event.ON_RESUME -> vm.setPaused(false)
+                    else -> Unit
+                }
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
@@ -94,13 +95,39 @@ fun GameScreen(
     LaunchedEffect(vm) {
         vm.events.collect { event ->
             when (event) {
-                GameEvent.Swap -> { sound.play(Sfx.SWAP); haptics.tick() }
-                GameEvent.Invalid -> { sound.play(Sfx.INVALID); haptics.tick() }
-                is GameEvent.Match -> { sound.match(event.cascade); haptics.match() }
-                GameEvent.Special -> { sound.play(Sfx.SPECIAL); haptics.heavy() }
-                GameEvent.Shuffle -> sound.play(Sfx.SHUFFLE)
-                GameEvent.Win -> { sound.play(Sfx.WIN); haptics.win() }
-                GameEvent.Fail -> { sound.play(Sfx.FAIL); haptics.heavy() }
+                GameEvent.Swap -> {
+                    sound.play(Sfx.SWAP)
+                    haptics.tick()
+                }
+
+                GameEvent.Invalid -> {
+                    sound.play(Sfx.INVALID)
+                    haptics.tick()
+                }
+
+                is GameEvent.Match -> {
+                    sound.match(event.cascade)
+                    haptics.match()
+                }
+
+                GameEvent.Special -> {
+                    sound.play(Sfx.SPECIAL)
+                    haptics.heavy()
+                }
+
+                GameEvent.Shuffle -> {
+                    sound.play(Sfx.SHUFFLE)
+                }
+
+                GameEvent.Win -> {
+                    sound.play(Sfx.WIN)
+                    haptics.win()
+                }
+
+                GameEvent.Fail -> {
+                    sound.play(Sfx.FAIL)
+                    haptics.heavy()
+                }
             }
         }
     }
@@ -119,7 +146,13 @@ fun GameScreen(
             Spacer(Modifier.height(8.dp))
             Box(Modifier.height(32.dp), contentAlignment = Alignment.Center) {
                 state.banner?.let {
-                    Text(it, color = PuzzlerColors.gold, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("banner"))
+                    Text(
+                        it,
+                        color = PuzzlerColors.gold,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.testTag("banner"),
+                    )
                 }
             }
             Box(
@@ -157,7 +190,6 @@ fun GameScreen(
             TutorialOverlay(
                 tutorial = tutorial,
                 targets = targets,
-                rows = state.snapshot.rows,
                 cols = state.snapshot.cols,
                 onNext = vm::nextTutorialStep,
                 onSkip = vm::skipTutorial,
@@ -180,7 +212,11 @@ fun GameScreen(
 }
 
 @Composable
-private fun Hud(state: GameUiState, targets: MutableMap<String, Rect>, onRules: () -> Unit) {
+private fun Hud(
+    state: GameUiState,
+    targets: MutableMap<String, Rect>,
+    onRules: () -> Unit,
+) {
     val level = state.level
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text("Level ${level.id}", fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -229,7 +265,13 @@ private fun Hud(state: GameUiState, targets: MutableMap<String, Rect>, onRules: 
 }
 
 @Composable
-private fun Stat(label: String, value: String, tag: String, warn: Boolean, modifier: Modifier = Modifier) {
+private fun Stat(
+    label: String,
+    value: String,
+    tag: String,
+    warn: Boolean,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
         Text(
@@ -252,11 +294,12 @@ private fun ResultDialog(
     onExit: () -> Unit,
 ) {
     val won = state.status == GameStatus.WON
-    val title = when {
-        won -> "Level ${state.level.id} cleared!"
-        state.endReason == EndReason.OUT_OF_TIME -> "Out of time"
-        else -> "Out of moves"
-    }
+    val title =
+        when {
+            won -> "Level ${state.level.id} cleared!"
+            state.endReason == EndReason.OUT_OF_TIME -> "Out of time"
+            else -> "Out of moves"
+        }
     AlertDialog(
         onDismissRequest = {},
         modifier = Modifier.testTag("result_dialog"),

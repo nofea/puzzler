@@ -10,6 +10,9 @@ composeBom = "2024.12.01"
 datastore = "1.1.1"
 serializationJson = "1.7.3"
 junit = "4.13.2"
+ktlintGradle = "14.2.0"
+ktlint = "1.8.0"
+detekt = "1.23.8"
 androidxJunit = "1.2.1"
 androidxTestRunner = "1.6.2"
 
@@ -39,3 +42,5 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

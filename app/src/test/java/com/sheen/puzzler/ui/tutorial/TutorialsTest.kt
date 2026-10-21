@@ -9,7 +9,6 @@ import org.junit.Test
 import java.io.File
 
 class TutorialsTest {
-
     private val levels = LevelParser.parse(File("src/main/assets/levels.json").readText())
 
     @Test

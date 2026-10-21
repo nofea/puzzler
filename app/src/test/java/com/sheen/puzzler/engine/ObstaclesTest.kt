@@ -6,7 +6,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ObstaclesTest {
-
     @Test
     fun `jelly under a match is cleared for 2 points`() {
         val board = testBoard(marks = marks(0 to 0, 0 to 1, 1 to 2))

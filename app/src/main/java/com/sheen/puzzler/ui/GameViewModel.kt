@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.sheen.puzzler.data.ProgressRepository
 import com.sheen.puzzler.engine.BoardSnapshot
 import com.sheen.puzzler.engine.GameEngine
+import com.sheen.puzzler.engine.MoveResult
 import com.sheen.puzzler.engine.Pattern
+import com.sheen.puzzler.engine.Phase
 import com.sheen.puzzler.engine.PhaseKind
 import com.sheen.puzzler.engine.Pos
 import com.sheen.puzzler.level.LevelDef
@@ -52,11 +54,19 @@ data class GameUiState(
 
 sealed interface GameEvent {
     data object Swap : GameEvent
+
     data object Invalid : GameEvent
-    data class Match(val cascade: Int) : GameEvent
+
+    data class Match(
+        val cascade: Int,
+    ) : GameEvent
+
     data object Special : GameEvent
+
     data object Shuffle : GameEvent
+
     data object Win : GameEvent
+
     data object Fail : GameEvent
 }
 
@@ -64,7 +74,6 @@ class GameViewModel(
     private val level: LevelDef,
     private val progress: ProgressRepository,
 ) : ViewModel() {
-
     private var engine: GameEngine = level.newEngine()
     private val _state = MutableStateFlow(initialState())
     val state: StateFlow<GameUiState> = _state.asStateFlow()
@@ -109,22 +118,23 @@ class GameViewModel(
     private fun startTimer() {
         timerJob?.cancel()
         if (!level.timed) return
-        timerJob = viewModelScope.launch {
-            while (true) {
-                delay(1000)
-                val s = _state.value
-                if (s.status != GameStatus.PLAYING) break
-                // The clock only runs once the tutorial (if any) is out of the way.
-                if (paused || tutorialLoading || s.tutorial?.visible == true) continue
-                val left = (s.timeLeft ?: 0) - 1
-                _state.update { it.copy(timeLeft = left.coerceAtLeast(0)) }
-                if (left <= 0) {
-                    // A move in flight finishes first; maybeEnd runs again when it does.
-                    if (!_state.value.busy) maybeEnd()
-                    break
+        timerJob =
+            viewModelScope.launch {
+                while (true) {
+                    delay(1000)
+                    val s = _state.value
+                    if (s.status != GameStatus.PLAYING) break
+                    // The clock only runs once the tutorial (if any) is out of the way.
+                    if (paused || tutorialLoading || s.tutorial?.visible == true) continue
+                    val left = (s.timeLeft ?: 0) - 1
+                    _state.update { it.copy(timeLeft = left.coerceAtLeast(0)) }
+                    if (left <= 0) {
+                        // A move in flight finishes first; maybeEnd runs again when it does.
+                        if (!_state.value.busy) maybeEnd()
+                        break
+                    }
                 }
             }
-        }
     }
 
     fun setPaused(value: Boolean) {
@@ -144,55 +154,76 @@ class GameViewModel(
         }
     }
 
-    fun onSwipe(a: Pos, b: Pos) {
+    fun onSwipe(
+        a: Pos,
+        b: Pos,
+    ) {
         val s = _state.value
-        if (s.busy || s.status != GameStatus.PLAYING) return
-        if (s.timeLeft == 0) return
-        if (!tutorialAllows(s.tutorial, a, b)) return
+        val accepting = !s.busy && s.status == GameStatus.PLAYING && s.timeLeft != 0
+        if (!accepting || !tutorialAllows(s.tutorial, a, b)) return
         val result = engine.swap(a, b)
         _state.update { it.copy(selected = null) }
-        if (result.phases.isEmpty()) return
+        if (result.phases.isNotEmpty()) viewModelScope.launch { playOut(result, s.score) }
+    }
 
-        viewModelScope.launch {
-            _state.update { it.copy(busy = true) }
-            _events.tryEmit(if (result.valid) GameEvent.Swap else GameEvent.Invalid)
-            var score = s.score
-            for (phase in result.phases) {
-                score += phase.scoreDelta
-                val banner = when {
-                    phase.kind == PhaseKind.SHUFFLE -> "No moves — shuffling…"
-                    phase.kind != PhaseKind.CLEAR -> _state.value.banner
-                    phase.cascade >= 2 -> "Cascade x${phase.cascade}!  +${phase.scoreDelta}"
-                    Pattern.LINE5 in phase.patterns -> "Line of 5!  +${phase.scoreDelta}"
-                    Pattern.LT in phase.patterns -> "L / T shape!  +${phase.scoreDelta}"
-                    Pattern.LINE4 in phase.patterns -> "Line of 4!  +${phase.scoreDelta}"
-                    else -> "+${phase.scoreDelta}"
-                }
-                _state.update {
-                    it.copy(
-                        previous = it.snapshot,
-                        snapshot = phase.snapshot,
-                        phaseKind = phase.kind,
-                        phaseId = it.phaseId + 1,
-                        phaseMillis = durationOf(phase.kind),
-                        score = score,
-                        movesLeft = engine.movesLeft,
-                        banner = banner,
-                    )
-                }
-                when (phase.kind) {
-                    PhaseKind.CLEAR -> {
-                        _events.tryEmit(GameEvent.Match(phase.cascade))
-                        if (phase.specialsFired > 0 || phase.specialsCreated.isNotEmpty()) _events.tryEmit(GameEvent.Special)
-                    }
-                    PhaseKind.SHUFFLE -> _events.tryEmit(GameEvent.Shuffle)
-                    else -> Unit
-                }
-                delay(durationOf(phase.kind).toLong())
+    /** Plays a move's phases one by one so the board can animate each, then settles the state. */
+    private suspend fun playOut(
+        result: MoveResult,
+        startScore: Int,
+    ) {
+        _state.update { it.copy(busy = true) }
+        _events.tryEmit(if (result.valid) GameEvent.Swap else GameEvent.Invalid)
+        var score = startScore
+        for (phase in result.phases) {
+            score += phase.scoreDelta
+            val banner = bannerFor(phase) ?: _state.value.banner
+            _state.update {
+                it.copy(
+                    previous = it.snapshot,
+                    snapshot = phase.snapshot,
+                    phaseKind = phase.kind,
+                    phaseId = it.phaseId + 1,
+                    phaseMillis = durationOf(phase.kind),
+                    score = score,
+                    movesLeft = engine.movesLeft,
+                    banner = banner,
+                )
             }
-            _state.update { it.copy(busy = false, banner = null, score = engine.score, movesLeft = engine.movesLeft) }
-            advanceTutorialAfterMove()
-            maybeEnd()
+            emitEffects(phase)
+            delay(durationOf(phase.kind).toLong())
+        }
+        _state.update { it.copy(busy = false, banner = null, score = engine.score, movesLeft = engine.movesLeft) }
+        advanceTutorialAfterMove()
+        maybeEnd()
+    }
+
+    /** The banner a phase shows; null keeps the current one (swaps and falls). */
+    private fun bannerFor(phase: Phase): String? =
+        when {
+            phase.kind == PhaseKind.SHUFFLE -> "No moves — shuffling…"
+            phase.kind != PhaseKind.CLEAR -> null
+            phase.cascade >= 2 -> "Cascade x${phase.cascade}!  +${phase.scoreDelta}"
+            Pattern.LINE5 in phase.patterns -> "Line of 5!  +${phase.scoreDelta}"
+            Pattern.LT in phase.patterns -> "L / T shape!  +${phase.scoreDelta}"
+            Pattern.LINE4 in phase.patterns -> "Line of 4!  +${phase.scoreDelta}"
+            else -> "+${phase.scoreDelta}"
+        }
+
+    /** Sound and haptic events for a phase. */
+    private fun emitEffects(phase: Phase) {
+        when (phase.kind) {
+            PhaseKind.CLEAR -> {
+                _events.tryEmit(GameEvent.Match(phase.cascade))
+                if (phase.specialsFired > 0 || phase.specialsCreated.isNotEmpty()) _events.tryEmit(GameEvent.Special)
+            }
+
+            PhaseKind.SHUFFLE -> {
+                _events.tryEmit(GameEvent.Shuffle)
+            }
+
+            else -> {
+                Unit
+            }
         }
     }
 
@@ -224,7 +255,10 @@ class GameViewModel(
     }
 
     /** While a tutorial callout is showing, the board only accepts the guided pair (if any). */
-    private fun tutorialAllows(t: TutorialState?, vararg cells: Pos): Boolean {
+    private fun tutorialAllows(
+        t: TutorialState?,
+        vararg cells: Pos,
+    ): Boolean {
         if (t == null || !t.visible) return true
         val step = t.step as? TutorialStep.GuidedSwap ?: return false
         return cells.all { it == step.a || it == step.b }
@@ -245,12 +279,16 @@ class GameViewModel(
                 _state.update { it.copy(tutorial = null) }
                 markTutorialSeen()
             }
+
             // The rest of the tutorial is a tip that waits for the pass mark; the guided part counts as done.
             is TutorialStep.WhenPassed -> {
                 markTutorialSeen()
                 _state.update { it.copy(tutorial = next.copy(dormant = !it.passed)) }
             }
-            else -> _state.update { it.copy(tutorial = next) }
+
+            else -> {
+                _state.update { it.copy(tutorial = next) }
+            }
         }
     }
 
@@ -279,11 +317,12 @@ class GameViewModel(
     }
 
     companion object {
-        fun durationOf(kind: PhaseKind) = when (kind) {
-            PhaseKind.SWAP, PhaseKind.SWAP_BACK -> 140
-            PhaseKind.CLEAR -> 220
-            PhaseKind.FALL -> 260
-            PhaseKind.SHUFFLE -> 450
-        }
+        fun durationOf(kind: PhaseKind) =
+            when (kind) {
+                PhaseKind.SWAP, PhaseKind.SWAP_BACK -> 140
+                PhaseKind.CLEAR -> 220
+                PhaseKind.FALL -> 260
+                PhaseKind.SHUFFLE -> 450
+            }
     }
 }

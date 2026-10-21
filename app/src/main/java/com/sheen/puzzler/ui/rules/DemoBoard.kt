@@ -42,7 +42,10 @@ import kotlinx.coroutines.delay
  * [BoardCanvas] with the same timings as a real level, with a small moves and score readout above the board.
  */
 @Composable
-fun DemoBoard(demos: List<RuleDemo>, modifier: Modifier = Modifier) {
+fun DemoBoard(
+    demos: List<RuleDemo>,
+    modifier: Modifier = Modifier,
+) {
     val first = remember(demos) { demos.first().newEngine().snapshot() }
     var caption by remember(demos) { mutableStateOf(demos.first().caption) }
     var previous by remember(demos) { mutableStateOf<BoardSnapshot>(first) }
@@ -116,6 +119,7 @@ fun DemoBoard(demos: List<RuleDemo>, modifier: Modifier = Modifier) {
             Canvas(Modifier.matchParentSize()) {
                 val (a, b) = hint ?: return@Canvas
                 val cell = size.width / current.cols
+
                 fun center(p: Pos) = Offset((p.col + 0.5f) * cell, (p.row + 0.5f) * cell)
                 drawSwipeHint(center(a), center(b), hintTime.value, cell)
             }

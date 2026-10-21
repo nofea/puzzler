@@ -13,17 +13,25 @@ data class Phase(
     val specialsFired: Int = 0,
 )
 
-data class MoveResult(val valid: Boolean, val phases: List<Phase>) {
+data class MoveResult(
+    val valid: Boolean,
+    val phases: List<Phase>,
+) {
     val scoreDelta get() = phases.sumOf { it.scoreDelta }
     val maxCascade get() = phases.maxOfOrNull { it.cascade } ?: 0
 }
+
+/** Bomb + bomb clears a 5×5 square: radius 2 around the swap. */
+private const val BOMB_PAIR_RADIUS = 2
 
 /**
  * Rules for one level: owns the board, the score and the move count. Time limits are enforced by the caller,
  * since the engine has no clock.
  */
-class GameEngine(val board: Board, moves: Int) {
-
+class GameEngine(
+    val board: Board,
+    moves: Int,
+) {
     var score = 0
         private set
     var movesLeft = moves
@@ -41,20 +49,31 @@ class GameEngine(val board: Board, moves: Int) {
 
     fun snapshot() = board.snapshot()
 
-    fun swap(a: Pos, b: Pos): MoveResult {
-        if (!canMove || !MoveFinder.isValidSwap(board, a, b)) {
-            if (canMove && board.inBounds(a) && board.inBounds(b) && a.isAdjacentTo(b) &&
-                board[a].isMovable && board[b].isMovable
-            ) {
-                // Show the attempt, then swap back. Costs no move.
-                swapPieces(a, b)
-                val there = Phase(PhaseKind.SWAP, board.snapshot())
-                swapPieces(a, b)
-                return MoveResult(false, listOf(there, Phase(PhaseKind.SWAP_BACK, board.snapshot())))
-            }
-            return MoveResult(false, emptyList())
+    fun swap(
+        a: Pos,
+        b: Pos,
+    ): MoveResult =
+        when {
+            canMove && MoveFinder.isValidSwap(board, a, b) -> play(a, b)
+            canMove && MoveFinder.isSwappable(board, a, b) -> bounce(a, b)
+            else -> MoveResult(false, emptyList())
         }
 
+    /** A swap that doesn't match: show the attempt, then swap back. Costs no move. */
+    private fun bounce(
+        a: Pos,
+        b: Pos,
+    ): MoveResult {
+        swapPieces(a, b)
+        val there = Phase(PhaseKind.SWAP, board.snapshot())
+        swapPieces(a, b)
+        return MoveResult(false, listOf(there, Phase(PhaseKind.SWAP_BACK, board.snapshot())))
+    }
+
+    private fun play(
+        a: Pos,
+        b: Pos,
+    ): MoveResult {
         val pa = board[a].piece!!
         val pb = board[b].piece!!
         swapPieces(a, b)
@@ -82,7 +101,11 @@ class GameEngine(val board: Board, moves: Int) {
         return MoveResult(true, phases)
     }
 
-    private fun cascadeLoop(startCascade: Int, swapped: List<Pos>, swapHorizontal: Boolean): List<Phase> {
+    private fun cascadeLoop(
+        startCascade: Int,
+        swapped: List<Pos>,
+        swapHorizontal: Boolean,
+    ): List<Phase> {
         val phases = mutableListOf<Phase>()
         var cascade = startCascade
         var playerSwap = swapped
@@ -91,10 +114,11 @@ class GameEngine(val board: Board, moves: Int) {
             if (groups.isEmpty()) break
 
             val matched = groups.flatMapTo(HashSet()) { it.cells }
-            val created = groups.mapNotNull { g ->
-                val special = g.specialToCreate(if (playerSwap.isNotEmpty()) swapHorizontal else null)
-                if (special == Special.NONE) null else Triple(g.specialPosition(playerSwap), special, g.color)
-            }
+            val created =
+                groups.mapNotNull { g ->
+                    val special = g.specialToCreate(if (playerSwap.isNotEmpty()) swapHorizontal else null)
+                    if (special == Special.NONE) null else Triple(g.specialPosition(playerSwap), special, g.color)
+                }
             val outcome = Resolver.clear(board, matched)
             for ((pos, special, color) in created) {
                 val pieceColor = if (special == Special.COLOR_BOMB) Piece.NO_COLOR else color
@@ -104,12 +128,16 @@ class GameEngine(val board: Board, moves: Int) {
             val base = groups.sumOf { it.pattern.basePoints }
             val delta = Scoring.applyMultiplier(base + outcome.bonusPoints, cascade)
             score += delta
-            phases += Phase(
-                PhaseKind.CLEAR, board.snapshot(), cascade, delta,
-                patterns = groups.map { it.pattern },
-                specialsCreated = created.map { it.second },
-                specialsFired = outcome.specialsFired,
-            )
+            phases +=
+                Phase(
+                    PhaseKind.CLEAR,
+                    board.snapshot(),
+                    cascade,
+                    delta,
+                    patterns = groups.map { it.pattern },
+                    specialsCreated = created.map { it.second },
+                    specialsFired = outcome.specialsFired,
+                )
             Gravity.settle(board)
             phases += Phase(PhaseKind.FALL, board.snapshot(), cascade)
             cascade++
@@ -118,42 +146,81 @@ class GameEngine(val board: Board, moves: Int) {
         return phases
     }
 
-    private class Combo(val cells: List<Pos>, val fired: Set<Long>)
+    private class Combo(
+        val cells: List<Pos>,
+        val fired: Set<Long>,
+    )
 
     /** Effect of swapping a color bomb or two specials. Pieces have already been swapped: [pa] is now at [b]. */
-    private fun comboBlast(a: Pos, b: Pos, pa: Piece, pb: Piece): Combo? {
+    private fun comboBlast(
+        a: Pos,
+        b: Pos,
+        pa: Piece,
+        pb: Piece,
+    ): Combo? {
         val sa = pa.special
         val sb = pb.special
-        val fired = setOf(pa.id, pb.id)
-        if (sa == Special.COLOR_BOMB || sb == Special.COLOR_BOMB) {
-            if (sa == Special.COLOR_BOMB && sb == Special.COLOR_BOMB) {
-                return Combo(board.positions().toList(), fired)
-            }
-            val other = if (sa == Special.COLOR_BOMB) pb else pa
-            val targets = Resolver.cellsOfColor(board, other.color)
-            if (other.special == Special.NONE) return Combo(targets + a + b, fired)
-            // Turn every piece of that color into the other special; they all fire as they clear.
-            for (p in targets) {
-                val cell = board[p]
-                val special = if (other.special.isStriped) {
-                    if (board.random.nextBoolean()) Special.STRIPED_H else Special.STRIPED_V
-                } else other.special
-                board[p] = cell.copy(piece = cell.piece!!.copy(special = special))
-            }
-            val bomb = if (sa == Special.COLOR_BOMB) b else a
-            return Combo(targets + bomb, setOf(if (sa == Special.COLOR_BOMB) pa.id else pb.id))
+        return when {
+            sa == Special.COLOR_BOMB && sb == Special.COLOR_BOMB -> Combo(board.positions().toList(), setOf(pa.id, pb.id))
+            sa == Special.COLOR_BOMB -> colorBombCombo(bombAt = b, bomb = pa, otherAt = a, other = pb)
+            sb == Special.COLOR_BOMB -> colorBombCombo(bombAt = a, bomb = pb, otherAt = b, other = pa)
+            sa != Special.NONE && sb != Special.NONE -> Combo(specialPairCells(sa, sb, b) + a + b, setOf(pa.id, pb.id))
+            else -> null
         }
-        if (sa == Special.NONE || sb == Special.NONE) return null
-        val cells = when {
-            sa.isStriped && sb.isStriped -> Resolver.row(board, b.row) + Resolver.column(board, b.col)
-            sa == Special.BOMB && sb == Special.BOMB -> Resolver.square(board, b, 2)
-            else -> (b.row - 1..b.row + 1).filter { it in 0 until board.rows }.flatMap { Resolver.row(board, it) } +
-                (b.col - 1..b.col + 1).filter { it in 0 until board.cols }.flatMap { Resolver.column(board, it) }
-        }
-        return Combo(cells + a + b, fired)
     }
 
-    private fun swapPieces(a: Pos, b: Pos) {
+    /**
+     * A color bomb swapped with [other]: clears every piece of [other]'s color. If [other] is a special, every piece of
+     * that color first turns into that special, and they all fire as they clear.
+     */
+    private fun colorBombCombo(
+        bombAt: Pos,
+        bomb: Piece,
+        otherAt: Pos,
+        other: Piece,
+    ): Combo {
+        val targets = Resolver.cellsOfColor(board, other.color)
+        if (other.special == Special.NONE) return Combo(targets + bombAt + otherAt, setOf(bomb.id, other.id))
+        for (p in targets) {
+            val cell = board[p]
+            board[p] = cell.copy(piece = cell.piece!!.copy(special = converted(other.special)))
+        }
+        return Combo(targets + bombAt, setOf(bomb.id))
+    }
+
+    /** The special a piece becomes when a color bomb meets [special]; striped pieces each get a random direction. */
+    private fun converted(special: Special): Special =
+        when {
+            !special.isStriped -> special
+            board.random.nextBoolean() -> Special.STRIPED_H
+            else -> Special.STRIPED_V
+        }
+
+    /** Cells hit when two specials (neither a color bomb) are swapped, centered on [at]. */
+    private fun specialPairCells(
+        sa: Special,
+        sb: Special,
+        at: Pos,
+    ): List<Pos> =
+        when {
+            sa.isStriped && sb.isStriped -> {
+                Resolver.row(board, at.row) + Resolver.column(board, at.col)
+            }
+
+            sa == Special.BOMB && sb == Special.BOMB -> {
+                Resolver.square(board, at, BOMB_PAIR_RADIUS)
+            }
+
+            else -> {
+                (at.row - 1..at.row + 1).filter { it in 0 until board.rows }.flatMap { Resolver.row(board, it) } +
+                    (at.col - 1..at.col + 1).filter { it in 0 until board.cols }.flatMap { Resolver.column(board, it) }
+            }
+        }
+
+    private fun swapPieces(
+        a: Pos,
+        b: Pos,
+    ) {
         val pa = board[a].piece
         board[a] = board[a].copy(piece = board[b].piece)
         board[b] = board[b].copy(piece = pa)

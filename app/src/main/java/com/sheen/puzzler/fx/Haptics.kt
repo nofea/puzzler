@@ -6,7 +6,9 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 
-class Haptics(context: Context) {
+class Haptics(
+    context: Context,
+) {
     private val vibrator: Vibrator? =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             context.getSystemService(VibratorManager::class.java)?.defaultVibrator
@@ -24,7 +26,10 @@ class Haptics(context: Context) {
     }
 
     fun tick() = vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+
     fun match() = vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+
     fun heavy() = vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
+
     fun win() = vibrate(VibrationEffect.createWaveform(longArrayOf(0, 60, 80, 60, 80, 160), -1))
 }

@@ -23,14 +23,15 @@ import kotlin.math.sin
  * (docs/SPEC.md §7). Rendered from art/items/ by scripts/render-items.py.
  */
 @Composable
-fun rememberItemImages(): List<ImageBitmap> = listOf(
-    ImageBitmap.imageResource(R.drawable.item_fries),
-    ImageBitmap.imageResource(R.drawable.item_burger),
-    ImageBitmap.imageResource(R.drawable.item_pizza),
-    ImageBitmap.imageResource(R.drawable.item_plant),
-    ImageBitmap.imageResource(R.drawable.item_soda),
-    ImageBitmap.imageResource(R.drawable.item_chocolate),
-)
+fun rememberItemImages(): List<ImageBitmap> =
+    listOf(
+        ImageBitmap.imageResource(R.drawable.item_fries),
+        ImageBitmap.imageResource(R.drawable.item_burger),
+        ImageBitmap.imageResource(R.drawable.item_pizza),
+        ImageBitmap.imageResource(R.drawable.item_plant),
+        ImageBitmap.imageResource(R.drawable.item_soda),
+        ImageBitmap.imageResource(R.drawable.item_chocolate),
+    )
 
 /**
  * Color bomb geometry shared by the board and the launch intro. The launcher icon (rendered by
@@ -88,7 +89,12 @@ internal fun DrawScope.drawItem(
 }
 
 /** Draws the color bomb: flat orb, the six mini items on their ring, and the gold sparkle core. */
-internal fun DrawScope.drawColorBomb(images: List<ImageBitmap>, center: Offset, radius: Float, alpha: Float = 1f) {
+internal fun DrawScope.drawColorBomb(
+    images: List<ImageBitmap>,
+    center: Offset,
+    radius: Float,
+    alpha: Float = 1f,
+) {
     drawCircle(PuzzlerColors.bombOrb.copy(alpha = alpha), radius, center)
     images.indices.forEach { i ->
         drawItem(images, i, center + ColorBomb.direction(i) * (radius * ColorBomb.RING), radius * ColorBomb.ITEM, alpha, shadow = false)
@@ -97,12 +103,16 @@ internal fun DrawScope.drawColorBomb(images: List<ImageBitmap>, center: Offset, 
 }
 
 /** Four-point sparkle: the color bomb's core. */
-internal fun sparklePath(c: Offset, r: Float): Path = Path().apply {
-    for (i in 0 until 8) {
-        val rr = if (i % 2 == 0) r else r * 0.3f
-        val a = -PI / 2 + i * PI / 4
-        val p = Offset(c.x + (cos(a) * rr).toFloat(), c.y + (sin(a) * rr).toFloat())
-        if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
+internal fun sparklePath(
+    c: Offset,
+    r: Float,
+): Path =
+    Path().apply {
+        for (i in 0 until 8) {
+            val rr = if (i % 2 == 0) r else r * 0.3f
+            val a = -PI / 2 + i * PI / 4
+            val p = Offset(c.x + (cos(a) * rr).toFloat(), c.y + (sin(a) * rr).toFloat())
+            if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
+        }
+        close()
     }
-    close()
-}

@@ -4,16 +4,16 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertTextEquals
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -43,7 +43,6 @@ import kotlin.random.Random
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class PuzzlerUiTest {
-
     @get:Rule
     val rule = createAndroidComposeRule<MainActivity>()
 
@@ -51,11 +50,12 @@ class PuzzlerUiTest {
 
     /** Fresh progress, with the level 1 and 6 tutorials already seen so other tests play the board directly. */
     @Before
-    fun resetProgress() = runBlocking {
-        app.progress.reset()
-        app.progress.markTutorialSeen(1)
-        app.progress.markTutorialSeen(6)
-    }
+    fun resetProgress() =
+        runBlocking {
+            app.progress.reset()
+            app.progress.markTutorialSeen(1)
+            app.progress.markTutorialSeen(6)
+        }
 
     @Test
     fun levelOneTutorialGuidesTheFirstSwap() {
@@ -80,7 +80,14 @@ class PuzzlerUiTest {
         // The last tip waits for 100 points; it shows straight away if the first move already got there.
         if (mirror.score >= LevelDef.PASS_SCORE) rule.onNodeWithTag("tutorial_next").performClick()
         rule.waitUntilDoesNotExist(hasTestTag("tutorial"), 5_000)
-        rule.waitUntil(5_000) { runBlocking { 1 in app.progress.progress.first().tutorialsSeen } }
+        rule.waitUntil(5_000) {
+            runBlocking {
+                1 in
+                    app.progress.progress
+                        .first()
+                        .tutorialsSeen
+            }
+        }
 
         // Seen once, it doesn't come back.
         rule.onNodeWithText("Quit").performClick()
@@ -150,7 +157,14 @@ class PuzzlerUiTest {
         rule.waitUntilExactlyOneExists(hasTestTag("tutorial"), 5_000)
         rule.onNodeWithTag("tutorial_skip").performClick()
         rule.waitUntilDoesNotExist(hasTestTag("tutorial"), 5_000)
-        rule.waitUntil(5_000) { runBlocking { 1 in app.progress.progress.first().tutorialsSeen } }
+        rule.waitUntil(5_000) {
+            runBlocking {
+                1 in
+                    app.progress.progress
+                        .first()
+                        .tutorialsSeen
+            }
+        }
         rule.onNodeWithTag("moves").assertTextEquals("12")
     }
 
@@ -244,12 +258,21 @@ class PuzzlerUiTest {
     fun soundToggleIsRemembered() {
         rule.onNodeWithTag("settings_button").performClick()
         rule.onNodeWithTag("sound_switch").assertIsOn().performClick()
-        rule.waitUntil(5_000) { runBlocking { app.progress.progress.first().muted } }
+        rule.waitUntil(5_000) {
+            runBlocking {
+                app.progress.progress
+                    .first()
+                    .muted
+            }
+        }
         rule.onNodeWithTag("sound_switch").assertIsOff()
     }
 
     /** Swipes [move] on screen and plays it on [mirror], which shares the screen engine's seed and stays in lockstep. */
-    private fun playMove(mirror: GameEngine, move: Pair<Pos, Pos>) {
+    private fun playMove(
+        mirror: GameEngine,
+        move: Pair<Pos, Pos>,
+    ) {
         waitReady()
         swipe(move.first, move.second)
         mirror.swap(move.first, move.second)
@@ -257,31 +280,56 @@ class PuzzlerUiTest {
     }
 
     /** The move that scores most (or least) right now, simulated on a copy so [mirror] is untouched. */
-    private fun best(mirror: GameEngine, highest: Boolean): Pair<Pos, Pos> {
+    private fun best(
+        mirror: GameEngine,
+        highest: Boolean,
+    ): Pair<Pos, Pos> {
         val moves = MoveFinder.allMoves(mirror.board)
         val score = { m: Pair<Pos, Pos> -> GameEngine(mirror.board.copy(Random(0)), 1).swap(m.first, m.second).scoreDelta }
         return if (highest) moves.maxBy(score) else moves.minBy(score)
     }
 
-    private fun titleText(): String? = runCatching {
-        rule.onNodeWithTag("rules_title").fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("") { it.text }
-    }.getOrNull()
+    private fun titleText(): String? =
+        runCatching {
+            rule
+                .onNodeWithTag("rules_title")
+                .fetchSemanticsNode()
+                .config[SemanticsProperties.Text]
+                .joinToString("") { it.text }
+        }.getOrNull()
 
     private fun seconds(clock: String) = clock.split(":").let { (m, s) -> m.toInt() * 60 + s.toInt() }
 
     private fun timeText(): String =
-        rule.onNodeWithTag("time").fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("") { it.text }
+        rule
+            .onNodeWithTag("time")
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.Text]
+            .joinToString("") { it.text }
 
     private fun movesText(): String =
-        rule.onNodeWithTag("moves").fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("") { it.text }
+        rule
+            .onNodeWithTag("moves")
+            .fetchSemanticsNode()
+            .config[SemanticsProperties.Text]
+            .joinToString("") { it.text }
 
-    private fun waitReady() = rule.waitUntil(10_000) {
-        rule.onNodeWithTag("board_container").fetchSemanticsNode().config.getOrNull(SemanticsProperties.StateDescription) == "ready"
-    }
+    private fun waitReady() =
+        rule.waitUntil(10_000) {
+            rule
+                .onNodeWithTag("board_container")
+                .fetchSemanticsNode()
+                .config
+                .getOrNull(SemanticsProperties.StateDescription) == "ready"
+        }
 
-    private fun swipe(a: Pos, b: Pos) {
+    private fun swipe(
+        a: Pos,
+        b: Pos,
+    ) {
         rule.onNodeWithTag("board").performTouchInput {
             val cell = width / 8f
+
             fun center(p: Pos) = Offset((p.col + 0.5f) * cell, (p.row + 0.5f) * cell)
             swipe(center(a), center(b), durationMillis = 150)
         }

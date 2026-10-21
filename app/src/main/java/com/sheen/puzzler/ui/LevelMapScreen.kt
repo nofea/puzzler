@@ -72,7 +72,12 @@ fun LevelMapScreen(
 }
 
 @Composable
-private fun LevelNode(level: LevelDef, progress: Progress, onPlay: (Int) -> Unit, modifier: Modifier) {
+private fun LevelNode(
+    level: LevelDef,
+    progress: Progress,
+    onPlay: (Int) -> Unit,
+    modifier: Modifier,
+) {
     val unlocked = progress.isUnlocked(level.id)
     val stars = progress.of(level.id).stars
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {

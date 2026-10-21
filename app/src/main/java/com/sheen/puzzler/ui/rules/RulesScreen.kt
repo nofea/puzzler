@@ -73,7 +73,10 @@ fun RulesScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun RulesCardView(card: RulesCard, active: Boolean) {
+private fun RulesCardView(
+    card: RulesCard,
+    active: Boolean,
+) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

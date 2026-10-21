@@ -45,9 +45,6 @@ import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.sin
 
-/** Where the system splash drew its orb, in window coordinates, so the intro picks up exactly on top of it. */
-data class OrbAnchor(val center: Offset, val radius: Float)
-
 private val RevealEasing = CubicBezierEasing(0.4f, 0f, 0.6f, 1f)
 
 /** Intro timeline in milliseconds (docs/SPEC.md §4). */
@@ -60,6 +57,7 @@ private object Intro {
     const val END = 2000f
 
     fun itemStart(i: Int) = i * ITEM_STAGGER
+
     fun itemLand(i: Int) = itemStart(i) + ITEM_FLIGHT
 }
 
@@ -69,7 +67,11 @@ private object Intro {
  * [anchor] arrives when the system splash hands over; until then only the splash background is drawn.
  */
 @Composable
-fun IntroOverlay(anchor: OrbAnchor?, progressRepo: ProgressRepository, onDone: () -> Unit) {
+fun IntroOverlay(
+    anchor: OrbAnchor?,
+    progressRepo: ProgressRepository,
+    onDone: () -> Unit,
+) {
     val context = LocalContext.current
     val progress by progressRepo.progress.collectAsState(initial = Progress())
     val sound = remember { SoundPlayer() }
@@ -141,10 +143,13 @@ fun IntroOverlay(anchor: OrbAnchor?, progressRepo: ProgressRepository, onDone: (
 
         // Everything but the revealed circle is still splash background. It grows just far enough to clear the
         // farthest corner, evenly enough that the wipe is visible.
-        val corner = maxOf(
-            hypot(center.x, center.y), hypot(size.width - center.x, center.y),
-            hypot(center.x, size.height - center.y), hypot(size.width - center.x, size.height - center.y),
-        )
+        val corner =
+            maxOf(
+                hypot(center.x, center.y),
+                hypot(size.width - center.x, center.y),
+                hypot(center.x, size.height - center.y),
+                hypot(size.width - center.x, size.height - center.y),
+            )
         val hole = Path().apply { addOval(Rect(center, corner * RevealEasing.transform(boom))) }
         clipPath(hole, ClipOp.Difference) {
             drawRect(PuzzlerColors.background)
@@ -162,12 +167,13 @@ fun IntroOverlay(anchor: OrbAnchor?, progressRepo: ProgressRepository, onDone: (
                 if (t < Intro.itemStart(i)) return@forEach
                 val dir = ColorBomb.direction(i)
                 val ring = orb * ColorBomb.RING
-                val dist = if (t < Intro.DETONATE) {
-                    val f = FastOutSlowInEasing.transform(((t - Intro.itemStart(i)) / Intro.ITEM_FLIGHT).coerceIn(0f, 1f))
-                    far + (ring - far) * f
-                } else {
-                    ring + far * FastOutLinearInEasing.transform(boom)
-                }
+                val dist =
+                    if (t < Intro.DETONATE) {
+                        val f = FastOutSlowInEasing.transform(((t - Intro.itemStart(i)) / Intro.ITEM_FLIGHT).coerceIn(0f, 1f))
+                        far + (ring - far) * f
+                    } else {
+                        ring + far * FastOutLinearInEasing.transform(boom)
+                    }
                 drawItem(images, i, center + dir * dist, orb * ColorBomb.ITEM, shadow = false)
             }
         }

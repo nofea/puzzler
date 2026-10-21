@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SpecialsTest {
-
     @Test
     fun `matched striped piece clears its row`() {
         val board = testBoard(marks = marks(0 to 0, 0 to 1, 1 to 2))

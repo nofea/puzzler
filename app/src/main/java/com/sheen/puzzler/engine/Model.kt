@@ -1,7 +1,10 @@
 package com.sheen.puzzler.engine
 
 /** Grid coordinate; row 0 is the top of the board. */
-data class Pos(val row: Int, val col: Int) {
+data class Pos(
+    val row: Int,
+    val col: Int,
+) {
     fun isAdjacentTo(other: Pos): Boolean =
         (row == other.row && kotlin.math.abs(col - other.col) == 1) ||
             (col == other.col && kotlin.math.abs(row - other.row) == 1)
@@ -22,13 +25,19 @@ enum class Special {
     BOMB,
 
     /** Swapped with a piece, clears every piece of that color. Has no color of its own. */
-    COLOR_BOMB;
+    COLOR_BOMB,
+
+    ;
 
     val isStriped get() = this == STRIPED_H || this == STRIPED_V
 }
 
 /** A piece on the board. [id] is unique per board and lets the UI animate pieces between snapshots. */
-data class Piece(val id: Long, val color: Int, val special: Special = Special.NONE) {
+data class Piece(
+    val id: Long,
+    val color: Int,
+    val special: Special = Special.NONE,
+) {
     companion object {
         const val NO_COLOR = -1
     }
@@ -54,7 +63,9 @@ data class Cell(
     val isMovable get() = isPlayable && piece != null && !locked
 }
 
-enum class Pattern(val basePoints: Int) {
+enum class Pattern(
+    val basePoints: Int,
+) {
     LINE3(Scoring.LINE3),
     LINE4(Scoring.LINE4),
     LT(Scoring.LT),
@@ -70,18 +81,33 @@ object Scoring {
     const val JELLY = 2
     const val STONE = 3
 
-    /** Cascade step 1 is the player's own move: x1, x1.5, x2, ... */
-    fun multiplier(cascadeStep: Int): Double = 1.0 + 0.5 * (cascadeStep - 1)
+    /** Extra multiplier per cascade step after the first. */
+    const val CASCADE_BONUS = 0.5
 
-    fun applyMultiplier(points: Int, cascadeStep: Int): Int = (points * multiplier(cascadeStep)).toInt()
+    /** Cascade step 1 is the player's own move: x1, x1.5, x2, ... */
+    fun multiplier(cascadeStep: Int): Double = 1.0 + CASCADE_BONUS * (cascadeStep - 1)
+
+    fun applyMultiplier(
+        points: Int,
+        cascadeStep: Int,
+    ): Int = (points * multiplier(cascadeStep)).toInt()
 }
 
 /** Immutable view of the board handed to the UI. */
-data class BoardSnapshot(val rows: Int, val cols: Int, val cells: List<Cell>) {
+data class BoardSnapshot(
+    val rows: Int,
+    val cols: Int,
+    val cells: List<Cell>,
+) {
     operator fun get(pos: Pos): Cell = cells[pos.row * cols + pos.col]
-    operator fun get(row: Int, col: Int): Cell = cells[row * cols + col]
 
-    fun positions(): Sequence<Pos> = sequence {
-        for (r in 0 until rows) for (c in 0 until cols) yield(Pos(r, c))
-    }
+    operator fun get(
+        row: Int,
+        col: Int,
+    ): Cell = cells[row * cols + col]
+
+    fun positions(): Sequence<Pos> =
+        sequence {
+            for (r in 0 until rows) for (c in 0 until cols) yield(Pos(r, c))
+        }
 }

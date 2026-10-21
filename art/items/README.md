@@ -15,6 +15,6 @@ Licensing: the Noto Emoji README states that its image resources are under the A
 
 `scripts/render-items.py` (devenv: `render-items`) recolors these to the game's piece colors, turns the canned food into a soda can, and renders:
 - `app/src/main/res/drawable-nodpi/item_*.webp`: the board items
-- `app/src/main/res/mipmap-*/ic_launcher_foreground.webp` and `ic_launcher_monochrome.webp`: the app icon
+- `app/src/main/res/mipmap-*dpi/ic_launcher_foreground.webp` and `ic_launcher_monochrome.webp`: the app icon
 
 Edit the recolor tables in the script, not the SVGs.

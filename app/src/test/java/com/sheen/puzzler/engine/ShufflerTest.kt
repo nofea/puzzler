@@ -8,7 +8,6 @@ import org.junit.Test
 import kotlin.random.Random
 
 class ShufflerTest {
-
     @Test
     fun `dead board is shuffled into a playable one`() {
         val board = Board.fromPieces(listOf("0123", "2301", "0123", "2301"), colors = 4, random = Random(5))

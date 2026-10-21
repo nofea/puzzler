@@ -7,7 +7,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ScoringTest {
-
     @Test
     fun `cascade multiplier`() {
         assertEquals(1.0, Scoring.multiplier(1), 0.0)

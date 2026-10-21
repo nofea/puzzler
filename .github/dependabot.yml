@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Gradle plugins and libraries, including gradle/libs.versions.toml.
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    # "build(deps): bump …" passes the PR title check and doesn't trigger a release.
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      androidx:
+        patterns: ["androidx.*"]
+      kotlin:
+        patterns: ["org.jetbrains.kotlin*", "org.jetbrains.kotlinx*"]
+
+  # Versions of the actions used in .github/workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+      include: scope

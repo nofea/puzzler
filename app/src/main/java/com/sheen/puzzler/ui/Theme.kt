@@ -27,36 +27,39 @@ object PuzzlerColors {
      * Piece colors by color index. Each item's artwork is recolored to its color (docs/SPEC.md §7), so shape and color
      * both identify a piece.
      */
-    val pieces = listOf(
-        Color(0xFFE5484D), // red: fries
-        Color(0xFFFF9F2E), // orange: burger
-        Color(0xFFF5D442), // yellow: pizza
-        Color(0xFF46C46E), // green: potted plant
-        Color(0xFF3E8BFF), // blue: soda can
-        Color(0xFFB065F0), // purple: chocolate bar
-    )
+    val pieces =
+        listOf(
+            Color(0xFFE5484D), // red: fries
+            Color(0xFFFF9F2E), // orange: burger
+            Color(0xFFF5D442), // yellow: pizza
+            Color(0xFF46C46E), // green: potted plant
+            Color(0xFF3E8BFF), // blue: soda can
+            Color(0xFFB065F0), // purple: chocolate bar
+        )
 }
 
 object PuzzlerFonts {
     /** Fredoka (SIL OFL, assets/licenses/Fredoka-OFL.txt), a variable font pinned to Bold. */
     @OptIn(ExperimentalTextApi::class)
-    val display = FontFamily(
-        Font(R.font.fredoka, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
-    )
+    val display =
+        FontFamily(
+            Font(R.font.fredoka, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
+        )
 }
 
 @Composable
 fun PuzzlerTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = Color(0xFFFF6FB5),
-            onPrimary = Color(0xFF2A0019),
-            secondary = PuzzlerColors.gold,
-            background = PuzzlerColors.background,
-            surface = PuzzlerColors.surface,
-            onBackground = Color.White,
-            onSurface = Color.White,
-        ),
+        colorScheme =
+            darkColorScheme(
+                primary = Color(0xFFFF6FB5),
+                onPrimary = Color(0xFF2A0019),
+                secondary = PuzzlerColors.gold,
+                background = PuzzlerColors.background,
+                surface = PuzzlerColors.surface,
+                onBackground = Color.White,
+                onSurface = Color.White,
+            ),
         content = content,
     )
 }
