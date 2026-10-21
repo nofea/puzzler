@@ -68,7 +68,7 @@ jobs:
       - name: Release manifest
         run: ./gradlew :app:processReleaseMainManifest --console=plain
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
