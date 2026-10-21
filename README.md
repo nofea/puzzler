@@ -81,7 +81,7 @@ GitHub Actions runs these workflows (in `.github/workflows/`):
 
 | Workflow | When | What |
 |---|---|---|
-| `CI` | every push, and PRs to `main` | unit tests and the debug APK; Lint; then the UI tests on an API 35 emulator. Test reports and the APK are uploaded as artifacts |
+| `CI` | every push, and PRs to `main` | unit tests and the debug APK; Lint; then the UI tests on an API 35 Pixel 6 emulator, the same device as `run-emulator`. Test reports and the APK are uploaded as artifacts |
 | `Release` | after `CI` passes on `main`, or by hand for MAJOR | see Versioning and releases |
 | `PR title` | PRs | checks that the title is a Conventional Commit |
 | `Security` | pushes and PRs to `main`, and weekly | see Code quality and security |

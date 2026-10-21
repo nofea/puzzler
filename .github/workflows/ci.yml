@@ -89,6 +89,8 @@ jobs:
       API_LEVEL: 35
       EMULATOR_TARGET: google_apis
       EMULATOR_ARCH: x86_64
+      # Same device as the local `run-emulator` AVD. Without it the runner creates a small default screen.
+      EMULATOR_PROFILE: pixel_6
     steps:
       - uses: actions/checkout@v4
 
@@ -117,7 +119,7 @@ jobs:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ env.API_LEVEL }}-${{ env.EMULATOR_TARGET }}-${{ env.EMULATOR_ARCH }}
+          key: avd-${{ env.API_LEVEL }}-${{ env.EMULATOR_TARGET }}-${{ env.EMULATOR_ARCH }}-${{ env.EMULATOR_PROFILE }}
 
       # On a cache miss, boot once and save a snapshot so later runs start warm.
       - name: Create AVD snapshot
@@ -127,6 +129,7 @@ jobs:
           api-level: ${{ env.API_LEVEL }}
           target: ${{ env.EMULATOR_TARGET }}
           arch: ${{ env.EMULATOR_ARCH }}
+          profile: ${{ env.EMULATOR_PROFILE }}
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: false
@@ -138,6 +141,7 @@ jobs:
           api-level: ${{ env.API_LEVEL }}
           target: ${{ env.EMULATOR_TARGET }}
           arch: ${{ env.EMULATOR_ARCH }}
+          profile: ${{ env.EMULATOR_PROFILE }}
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true

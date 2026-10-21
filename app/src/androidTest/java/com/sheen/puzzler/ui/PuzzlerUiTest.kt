@@ -19,6 +19,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -124,8 +125,7 @@ class PuzzlerUiTest {
             app.progress.reset()
             app.progress.recordWin(5, score = 100, stars = 1)
         }
-        rule.waitUntilExactlyOneExists(hasContentDescription("Level 6"), 5_000)
-        rule.onNodeWithTag("level_6").performClick()
+        openLevel(6)
         rule.waitUntilExactlyOneExists(hasAnyAncestor(hasTestTag("tutorial_card")) and hasText("Timer"), 5_000)
         Thread.sleep(2_500)
         rule.onNodeWithTag("time").assertTextEquals("1:00")
@@ -223,8 +223,7 @@ class PuzzlerUiTest {
     fun runningOutOfMovesBelowTheTargetFails() {
         val levelId = FAIL_LEVEL
         runBlocking { app.progress.recordWin(levelId - 1, score = 100, stars = 1) }
-        rule.waitUntilExactlyOneExists(hasContentDescription("Level $levelId"), 5_000)
-        rule.onNodeWithTag("level_$levelId").performClick()
+        openLevel(levelId)
         val mirror = app.levels.level(levelId).newEngine()
         while (mirror.canMove) playMove(mirror, best(mirror, highest = false))
         assertTrue("worst-move player passed level $levelId; pick another FAIL_LEVEL", mirror.score < LevelDef.PASS_SCORE)
@@ -266,6 +265,13 @@ class PuzzlerUiTest {
             }
         }
         rule.onNodeWithTag("sound_switch").assertIsOff()
+    }
+
+    /** Scrolls the map to level [id], waits for it to unlock and opens it. Small screens only compose later levels once scrolled to. */
+    private fun openLevel(id: Int) {
+        rule.onNodeWithTag("level_map").performScrollToNode(hasTestTag("level_$id"))
+        rule.waitUntilExactlyOneExists(hasContentDescription("Level $id"), 5_000)
+        rule.onNodeWithTag("level_$id").performClick()
     }
 
     /** Swipes [move] on screen and plays it on [mirror], which shares the screen engine's seed and stays in lockstep. */

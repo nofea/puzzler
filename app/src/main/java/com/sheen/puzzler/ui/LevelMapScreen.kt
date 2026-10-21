@@ -56,7 +56,7 @@ fun LevelMapScreen(
         val totalStars = levels.sumOf { progress.of(it.id).stars }
         Text("★ $totalStars / ${levels.size * 3}", color = PuzzlerColors.gold, fontSize = 16.sp)
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().testTag("level_map"),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
