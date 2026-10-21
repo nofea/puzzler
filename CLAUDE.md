@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Puzzler is a match-3 Android game (Kotlin, Jetpack Compose, single `app` module, package `com.sheen.puzzler`). `docs/SPEC.md` is the authoritative spec for game rules, scoring, level design and signing. Keep it, `README.md` and the code in sync when rules change.
+Puzzler is a match-3 Android game (Kotlin, Jetpack Compose, single `app` module, package `com.sheen.puzzler`). `docs/SPEC.md` is the authoritative spec for the game and its features: rules, scoring, levels, screens and the app icon. Keep it, `README.md` and the code in sync when rules change. The spec is about the game only. Build, CI, signing, architecture and workflow details (including commit steps) belong in `README.md` or this file, never in the spec.
 
 ## Environment and commands
 

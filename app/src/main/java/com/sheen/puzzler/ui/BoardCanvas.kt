@@ -243,13 +243,14 @@ private fun DrawScope.drawLock(topLeft: Offset, cell: Float, alpha: Float) {
 
 private fun DrawScope.drawPiece(piece: Piece, center: Offset, radius: Float, alpha: Float) {
     if (piece.special == Special.COLOR_BOMB) {
-        drawCircle(Color(0xFF3B2414).copy(alpha = alpha), radius, center)
+        // Same design and proportions as the launcher icon (docs/SPEC.md §5): flat orb, mini gems from the top, gold core.
+        drawCircle(PuzzlerColors.bombOrb.copy(alpha = alpha), radius, center)
         PuzzlerColors.pieces.forEachIndexed { i, color ->
-            val angle = 2 * PI * i / PuzzlerColors.pieces.size
-            val dot = center + Offset((cos(angle) * radius * 0.55f).toFloat(), (sin(angle) * radius * 0.55f).toFloat())
-            drawCircle(color.copy(alpha = alpha), radius * 0.2f, dot)
+            val angle = -PI / 2 + 2 * PI * i / PuzzlerColors.pieces.size
+            val gem = center + Offset((cos(angle) * radius * 0.6f).toFloat(), (sin(angle) * radius * 0.6f).toFloat())
+            drawPath(shapePath(i, gem, radius * 0.19f), color.copy(alpha = alpha))
         }
-        drawCircle(Color.White.copy(alpha = 0.8f * alpha), radius * 0.18f, center)
+        drawPath(sparklePath(center, radius * 0.23f), PuzzlerColors.gold.copy(alpha = alpha))
         return
     }
 
@@ -314,6 +315,17 @@ private fun Path.polygon(c: Offset, r: Float, sides: Int, start: Double, yShift:
         val x = c.x + (cos(a) * r).toFloat()
         val y = c.y + yShift + (sin(a) * r).toFloat()
         if (i == 0) moveTo(x, y) else lineTo(x, y)
+    }
+    close()
+}
+
+/** Four-point sparkle: the color bomb's core. */
+private fun sparklePath(c: Offset, r: Float): Path = Path().apply {
+    for (i in 0 until 8) {
+        val rr = if (i % 2 == 0) r else r * 0.3f
+        val a = -PI / 2 + i * PI / 4
+        val p = Offset(c.x + (cos(a) * rr).toFloat(), c.y + (sin(a) * rr).toFloat())
+        if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
     }
     close()
 }

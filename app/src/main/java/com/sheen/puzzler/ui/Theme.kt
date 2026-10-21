@@ -15,6 +15,7 @@ object PuzzlerColors {
     val stoneHard = Color(0xFF5A606B)
     val lock = Color(0xFFD9DDE3)
     val gold = Color(0xFFFFD34D)
+    val bombOrb = Color(0xFF140A26)
 
     /** Piece colors, paired with distinct shapes in [BoardCanvas] so color isn't the only cue. */
     val pieces = listOf(
