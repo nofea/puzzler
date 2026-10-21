@@ -1,0 +1,38 @@
+# Overrides on top of detekt's default rules (buildUponDefaultConfig = true). Every change says why.
+# Formatting is not configured here: ktlint owns code style (.editorconfig).
+
+naming:
+  FunctionNaming:
+    # Compose functions are PascalCase by convention.
+    ignoreAnnotated: ['Composable']
+
+complexity:
+  LongParameterList:
+    # Composables take state and callbacks as parameters by design. Parameters with defaults don't burden callers.
+    ignoreAnnotated: ['Composable']
+    ignoreDefaultParameters: true
+  LongMethod:
+    # A screen's layout reads best as one composable.
+    ignoreAnnotated: ['Composable']
+  CyclomaticComplexMethod:
+    # Same reason as LongMethod: a composable's branches are its layout states, not logic to split up.
+    ignoreAnnotated: ['Composable']
+  TooManyFunctions:
+    # Board (the grid API) and GameViewModel (one public function per user action) are cohesive; 11 is too low for them.
+    thresholdInClasses: 20
+    thresholdInFiles: 20
+
+style:
+  MaxLineLength:
+    # Same limit as ktlint (.editorconfig).
+    maxLineLength: 140
+  MagicNumber:
+    # Drawing/layout code (ui) and synthesized sounds and haptic patterns (fx) are made of proportions, pitches and
+    # timings; naming each one would hurt readability. Game logic (engine, level, data) still has to name its numbers.
+    excludes: ['**/ui/**', '**/fx/**', '**/test/**', '**/androidTest/**', '**/*.kts']
+  ReturnCount:
+    # Early-return guard clauses are idiomatic Kotlin and don't make a function harder to follow.
+    excludeGuardClauses: true
+  LoopWithTooManyJumpStatements:
+    # Scan loops (gesture tracking, gravity, blast queues) skip cells with `continue` and stop with `break`.
+    maxJumpCount: 3

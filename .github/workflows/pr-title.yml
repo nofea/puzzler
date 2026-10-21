@@ -1,0 +1,30 @@
+name: PR title
+
+# PRs are squash-merged, so the title becomes the commit on main that decides the version bump.
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  conventional-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # feat -> MINOR, fix -> PATCH, the rest release nothing.
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            test
+            docs
+            ci
+            build
+            chore
+            revert

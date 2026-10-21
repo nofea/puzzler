@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Android Lint exceptions. Everything else is an error (see the lint block in build.gradle.kts). -->
+<lint>
+    <!-- Dependency and SDK freshness is Dependabot's job; these would fail CI whenever a new version ships. -->
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="NewerVersionAvailable" severity="ignore" />
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+    <issue id="OldTargetApi" severity="ignore" />
+    <!-- Puzzler is a portrait game: the HUD, board and dialogs are laid out for portrait only. -->
+    <issue id="LockedOrientationActivity" severity="ignore" />
+    <issue id="DiscouragedApi">
+        <ignore regexp="fixed orientation" />
+    </issue>
+    <!-- Lint sizes the adaptive icon's monochrome layer like a legacy 48dp icon; adaptive layers are 108dp
+         (the foreground layer, same size, isn't flagged). Rendered by scripts/render-items.py. -->
+    <issue id="IconExpectedSize">
+        <ignore path="src/main/res/mipmap-*/ic_launcher_monochrome.webp" />
+    </issue>
+</lint>

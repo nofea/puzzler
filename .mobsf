@@ -1,0 +1,19 @@
+---
+# mobsfscan configuration. Zero tolerance: every finding fails the scan unless it is listed here with a reason.
+- ignore-paths:
+    # The source manifest lacks minSdk/targetSdk (they're set in Gradle), so manifest rules misjudge it; the scan
+    # reads the merged manifest the build produces instead, which is what actually ships.
+    - app/src/main/AndroidManifest.xml
+  ignore-rules:
+    # The app requests no network permission (it is fully offline), so TLS pinning and certificate transparency
+    # have nothing to protect.
+    - android_ssl_pinning
+    - android_certificate_transparency
+    # Anti-tamper checks for apps guarding money or accounts; an offline game with local progress has neither.
+    # (SafetyNet is also discontinued.)
+    - android_root_detection
+    - android_safetynet
+    # Players should be able to screenshot their scores; nothing on screen is sensitive.
+    - android_prevent_screenshot
+    # Tapjacking protection matters for sensitive confirmations (payments, permissions); the game has none.
+    - android_tapjacking

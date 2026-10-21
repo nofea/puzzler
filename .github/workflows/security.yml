@@ -1,0 +1,103 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, to catch newly published vulnerabilities in code that hasn't changed.
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: CodeQL (Kotlin)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+          build-mode: manual
+          queries: security-and-quality
+
+      # CodeQL watches the compiler, so the build must actually compile (no build cache).
+      - name: Build
+        run: ./gradlew :app:assembleDebug --no-build-cache --console=plain
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:java-kotlin
+
+  mobsfscan:
+    name: mobsfscan (Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    env:
+      # What ships: the release build's merged manifest (states minSdk/targetSdk, not debuggable).
+      RELEASE_MANIFEST: app/build/intermediates/merged_manifest/release/processReleaseMainManifest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Release manifest
+        run: ./gradlew :app:processReleaseMainManifest --console=plain
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install mobsfscan
+        run: pip install mobsfscan==1.0.1
+
+      # Results go to Security → Code scanning, even when the next step fails.
+      - name: Scan (SARIF)
+        run: mobsfscan --config .mobsf --sarif --output mobsfscan.sarif app/src/main "$RELEASE_MANIFEST" || true
+
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: mobsfscan.sarif
+          category: mobsfscan
+
+      # Zero tolerance: any finding not excepted in .mobsf fails the job.
+      - name: Scan (fail on findings)
+        run: mobsfscan --config .mobsf --exit-warning app/src/main "$RELEASE_MANIFEST"
+
+  gitleaks:
+    name: gitleaks (secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The whole history: a secret removed in a later commit is still leaked.
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
