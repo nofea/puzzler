@@ -115,7 +115,7 @@ Every check is zero-tolerance: a finding fails it. Exceptions are rare and live 
 | gitleaks | Secrets anywhere in the git history | `security-scan` | `Security` → gitleaks |
 | mobsfscan | Android-specific security issues in the code and the release manifest | `security-scan` | `Security` → mobsfscan |
 | CodeQL | Security and quality issues in the Kotlin code | — | `Security` → CodeQL |
-| Dependabot | Vulnerable or outdated Gradle dependencies and Actions | — | weekly PRs |
+| Dependabot | Vulnerable or outdated Gradle dependencies and Actions | — | monthly PRs; Gradle major versions are skipped |
 
 The lint job is part of CI, so a lint failure also blocks releases. The Security workflow runs on pushes and PRs to `main`, and weekly. CodeQL and mobsfscan findings appear under **Security → Code scanning** on GitHub.
 
