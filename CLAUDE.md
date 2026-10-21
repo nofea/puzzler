@@ -33,6 +33,8 @@ The core split: `engine/` is **pure Kotlin with no Android imports**, so all gam
   - The engine's RNG comes from a seeded `Random` passed to `Board`, so tests and levels are deterministic.
 - **`level/`**: `LevelDef` (kotlinx.serialization) is loaded from `app/src/main/assets/levels.json`. Layouts are ASCII grids: `.` cell, `#` hole, `J` jelly, `S`/`T` stone with 1/2 hp, `L` locked. `LevelDef.newEngine(seed)` builds the board and engine. The pass score is always 100 (`PASS_SCORE`). Levels can be tuned in the JSON without code changes.
 - **`ui/`**: `GameViewModel` owns the engine and a timer coroutine. On a swipe it calls `engine.swap` and then plays the phases back one at a time, with a `delay(durationOf(kind))` between them, publishing each snapshot to `GameUiState`. `BoardCanvas` draws the board and gems on a Compose Canvas and handles drag-to-swap. Navigation Compose connects `LevelMapScreen`, `GameScreen` and `SettingsScreen` in a single `MainActivity`.
+  - Gem shapes and the color bomb are drawn by `GemDrawing.kt`, shared by `BoardCanvas` and the launch intro. The launcher icon and the `splash_orb` drawables use the same proportions, so change them together.
+  - Launch: `MainActivity` installs the androidx splash screen, then hands its orb position to `IntroOverlay`. The intro is drawn over the `NavHost` and plays once per process (`PuzzlerApplication.introShown`). It is skipped when the system's animator scale is 0, which is how the UI tests and CI run, so tests never see it.
 - **`data/`**: `ProgressRepository` (Preferences DataStore) stores unlocked levels, the best score and stars per level, and the settings.
 - **`fx/`**: `SoundPlayer` synthesizes PCM in code with `AudioTrack` (there are no audio asset files), and `Haptics`.
 

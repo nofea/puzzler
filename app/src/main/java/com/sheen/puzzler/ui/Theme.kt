@@ -4,6 +4,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontWeight
+import com.sheen.puzzler.R
 
 object PuzzlerColors {
     val background = Color(0xFF1B1035)
@@ -25,6 +31,14 @@ object PuzzlerColors {
         Color(0xFF46C46E), // green triangle
         Color(0xFF3E8BFF), // blue hexagon
         Color(0xFFB065F0), // purple star
+    )
+}
+
+object PuzzlerFonts {
+    /** Fredoka (SIL OFL, assets/licenses/Fredoka-OFL.txt), a variable font pinned to Bold. */
+    @OptIn(ExperimentalTextApi::class)
+    val display = FontFamily(
+        Font(R.font.fredoka, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
     )
 }
 

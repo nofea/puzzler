@@ -8,6 +8,7 @@ Puzzler is a Candy‑Crush‑style match‑3 game for Android. It has 10 levels,
 | Name | **Puzzler** |
 | Pieces | Gems with a distinct shape and color per type (colorblind‑friendly). The color bomb is a near‑black orb ringed by the six mini gem shapes, with a gold sparkle core (same design as the app icon) |
 | App icon | The color bomb on a purple radial glow, with a monochrome version for themed icons. See §5 |
+| Launch | Splash, then a ~2 s color‑bomb intro (assemble → detonate) on cold start; tap to skip. See §4 |
 | Pass rule | ≥100 points before the limits run out. Stars: 1★ = 100; the 2★/3★ thresholds rise per level |
 | Limits | L1–5: move limit. L6–10: move limit **and** timer; either running out ends the level |
 | Patterns | Line 3/4/5, L/T shapes, cascades, special pieces |
@@ -60,6 +61,15 @@ Puzzler is a Candy‑Crush‑style match‑3 game for Android. It has 10 levels,
 Balance: cascades make 100 points come quickly. A random player passes about 100% of L1 attempts and about 30% of L10 attempts, while a greedy player passes about 80–100% of attempts on every level. 2★ is set near the greedy player's 30th‑percentile score and 3★ near its 75th.
 
 ## 4. Screens and feedback
+- **Launch intro**: the app opens on a splash of the color bomb's orb and sparkle on the dark purple background. The intro then plays (about 2 s):
+  1. **Assemble (0–0.8 s):** the six gems fly in from off‑screen and lock into their ring around the orb, one by one, with a tick as each lands.
+  2. **Title (0.8 s):** the sparkle flashes, and "PUZZLER" (rounded display font, gold) fades in under the bomb, followed by the tagline "Match. Cascade. Detonate.".
+  3. **Detonate (1.3 s):** the bomb detonates with a boom and a strong vibration, and the gems burst outward off‑screen.
+  4. **Reveal (1.3–2.0 s):** a circle expanding from the bomb's center uncovers the level map.
+  - Tapping during the intro jumps straight to the detonation.
+  - The intro plays only when the app starts fresh, not when returning from the background.
+  - It is skipped entirely when the phone's animations are turned off (accessibility).
+  - Its sounds and vibration follow the Sound and Vibration settings.
 - **Level map**: the 10 levels as a winding path of nodes. Locked levels show a lock, cleared levels show their stars (a gold ring at 3★), timed levels show their time limit, and the total stars are shown at the top. Level 1 starts unlocked; clearing a level unlocks the next.
 - **Game screen**:
   - **HUD**: level number, moves left, and time left on timed levels (both turn red when running low). It also shows the score against the 100 target, the stars earned so far, and a progress bar that runs to the 3★ score.

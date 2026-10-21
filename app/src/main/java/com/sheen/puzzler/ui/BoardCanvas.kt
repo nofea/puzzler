@@ -16,8 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -33,10 +31,7 @@ import com.sheen.puzzler.engine.Piece
 import com.sheen.puzzler.engine.PhaseKind
 import com.sheen.puzzler.engine.Pos
 import com.sheen.puzzler.engine.Special
-import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.sin
 import kotlin.math.sign
 
 /**
@@ -243,14 +238,8 @@ private fun DrawScope.drawLock(topLeft: Offset, cell: Float, alpha: Float) {
 
 private fun DrawScope.drawPiece(piece: Piece, center: Offset, radius: Float, alpha: Float) {
     if (piece.special == Special.COLOR_BOMB) {
-        // Same design and proportions as the launcher icon (docs/SPEC.md §5): flat orb, mini gems from the top, gold core.
-        drawCircle(PuzzlerColors.bombOrb.copy(alpha = alpha), radius, center)
-        PuzzlerColors.pieces.forEachIndexed { i, color ->
-            val angle = -PI / 2 + 2 * PI * i / PuzzlerColors.pieces.size
-            val gem = center + Offset((cos(angle) * radius * 0.6f).toFloat(), (sin(angle) * radius * 0.6f).toFloat())
-            drawPath(shapePath(i, gem, radius * 0.19f), color.copy(alpha = alpha))
-        }
-        drawPath(sparklePath(center, radius * 0.23f), PuzzlerColors.gold.copy(alpha = alpha))
+        // Same design and proportions as the launcher icon (docs/SPEC.md §5).
+        drawColorBomb(center, radius, alpha)
         return
     }
 
@@ -284,50 +273,6 @@ private fun DrawScope.drawPiece(piece: Piece, center: Offset, radius: Float, alp
         }
         else -> Unit
     }
-}
-
-/** A distinct outline per color index: circle, rounded square, diamond, triangle, hexagon, star. */
-private fun shapePath(colorIndex: Int, c: Offset, r: Float): Path = Path().apply {
-    when (colorIndex % 6) {
-        0 -> addOval(Rect(c, r * 0.95f))
-        1 -> {
-            val h = r * 0.85f
-            addRoundRect(RoundRect(c.x - h, c.y - h, c.x + h, c.y + h, r * 0.3f, r * 0.3f))
-        }
-        2 -> polygon(c, r * 1.05f, 4, -PI / 2)
-        3 -> polygon(c, r * 1.08f, 3, -PI / 2, yShift = r * 0.15f)
-        4 -> polygon(c, r, 6, 0.0)
-        else -> {
-            for (i in 0 until 10) {
-                val rr = if (i % 2 == 0) r * 1.05f else r * 0.5f
-                val a = -PI / 2 + i * PI / 5
-                val p = Offset(c.x + (cos(a) * rr).toFloat(), c.y + (sin(a) * rr).toFloat())
-                if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
-            }
-            close()
-        }
-    }
-}
-
-private fun Path.polygon(c: Offset, r: Float, sides: Int, start: Double, yShift: Float = 0f) {
-    for (i in 0 until sides) {
-        val a = start + i * 2 * PI / sides
-        val x = c.x + (cos(a) * r).toFloat()
-        val y = c.y + yShift + (sin(a) * r).toFloat()
-        if (i == 0) moveTo(x, y) else lineTo(x, y)
-    }
-    close()
-}
-
-/** Four-point sparkle: the color bomb's core. */
-private fun sparklePath(c: Offset, r: Float): Path = Path().apply {
-    for (i in 0 until 8) {
-        val rr = if (i % 2 == 0) r else r * 0.3f
-        val a = -PI / 2 + i * PI / 4
-        val p = Offset(c.x + (cos(a) * rr).toFloat(), c.y + (sin(a) * rr).toFloat())
-        if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
-    }
-    close()
 }
 
 private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t

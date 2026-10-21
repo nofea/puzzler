@@ -8,7 +8,7 @@ import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.sin
 
-enum class Sfx { SWAP, INVALID, SPECIAL, SHUFFLE, WIN, FAIL }
+enum class Sfx { SWAP, INVALID, SPECIAL, SHUFFLE, WIN, FAIL, LOCK, DETONATE }
 
 /** Plays short tones synthesized at startup, so the app ships no audio files. */
 class SoundPlayer {
@@ -64,6 +64,9 @@ class SoundPlayer {
         Sfx.SHUFFLE -> listOf(Note(500.0, 50), Note(600.0, 50), Note(500.0, 50), Note(600.0, 50))
         Sfx.WIN -> listOf(Note(523.0, 120), Note(659.0, 120), Note(784.0, 120), Note(1047.0, 300))
         Sfx.FAIL -> listOf(Note(392.0, 180), Note(330.0, 180), Note(262.0, 360))
+        Sfx.LOCK -> listOf(Note(1200.0, 35))
+        // A falling boom (stepped 220 -> 110 Hz) followed by a bright chime.
+        Sfx.DETONATE -> listOf(Note(220.0, 60), Note(185.0, 60), Note(155.0, 60), Note(130.0, 60), Note(110.0, 60), Note(1320.0, 160))
     }
 
     private fun play(key: String, notes: () -> List<Note>) {

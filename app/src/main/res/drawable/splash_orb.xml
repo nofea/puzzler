@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launch splash: the app icon's orb and sparkle without the gems, which fly in during the intro (docs/SPEC.md §4). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FF140A26"
+        android:pathData="M28,54 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0 Z" />
+    <path android:fillColor="#FFFFD34D"
+        android:pathData="M54,48.02 L55.27,52.73 L59.98,54 L55.27,55.27 L54,59.98 L52.73,55.27 L48.02,54 L52.73,52.73 Z" />
+</vector>
