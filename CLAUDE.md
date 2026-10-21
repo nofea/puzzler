@@ -19,7 +19,7 @@ The toolchain comes from devenv (`devenv.nix`): JDK 21 (supplied by the devenv A
 - UI tests need a device in `adb devices`. For an emulator, use `devenv --profile emulator shell`, then `run-emulator` (headless API 35 AVD `puzzler-api35`; add `--window` to watch it).
 - `assembleRelease` fails on purpose when no signing key is configured. The key comes from `keystore.properties` at the repo root (gitignored, written by `gen-keystore`) or from the `PUZZLER_KEYSTORE_FILE`, `PUZZLER_KEYSTORE_PASSWORD`, `PUZZLER_KEY_ALIAS` and `PUZZLER_KEY_PASSWORD` env vars. Never commit keystores or `keystore.properties`.
 - `verify-apk` checks the release signature, and `install-apk` runs `adb install -r` with it.
-- CI (`.github/workflows/ci.yml`) runs the unit tests and the debug build on every push and on PRs to `main`. It uses the runner's own Android SDK and Temurin 21, not devenv.
+- CI (`.github/workflows/ci.yml`) runs on every push and on PRs to `main`. The `build` job runs the unit tests and the debug build. The `ui-test` job runs after it and executes `connectedDebugAndroidTest` on an API 35 emulator (`reactivecircus/android-emulator-runner`, AVD snapshot cached). Both use the runner's own Android SDK and Temurin 21, not devenv.
 
 ## Architecture
 
