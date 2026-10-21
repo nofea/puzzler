@@ -123,6 +123,12 @@ android {
     buildFeatures {
         compose = true
     }
+    packaging {
+        // The app has no native code; the only .so files come from AndroidX AARs, which ship them already stripped.
+        // Skipping the strip step avoids AGP looking for an NDK, which devenv doesn't install (its local.properties
+        // still names one, so every release build warned CXX1102). Revisit if a dependency ever ships unstripped libs.
+        jniLibs.keepDebugSymbols += "**/*.so"
+    }
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
