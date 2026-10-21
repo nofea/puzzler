@@ -1,13 +1,13 @@
 # Puzzler
 
-A match-3 puzzle game for Android, written in Kotlin with Jetpack Compose, with two modes:
+A match-3 puzzle game for Android by **Sheen Games**, written in Kotlin with Jetpack Compose, with two modes:
 
 - **Campaign:** 20 levels, each harder than the last. To pass a level, clear every obstacle on the board (jelly, locked items, stones) and score **100 points**.
 - **Endless:** one board that keeps going until you start a new run or it jams, getting harder every 500 points. It unlocks once level 10 is cleared.
 
 See [docs/SPEC.md](docs/SPEC.md) for the full game rules.
 
-You match six items: fries, burgers, pizza, potted plants, soda cans and chocolate bars. A **How to play** page explains every rule with live demos. Every level that brings in something new (levels 1–7, 11 and 16) has a guided in-level tutorial the first time you play it. Winning a level, losing one, and clearing the whole campaign each have their own splash.
+You match six items: fries, burgers, pizza, potted plants, soda cans and chocolate bars. A **How to play** page explains every rule with live demos. Every level that brings in something new (levels 1–7, 11 and 16) has a guided in-level tutorial the first time you play it. Winning a level, losing one, and clearing the whole campaign each have their own splash. The **About** page on the Home screen shows the creator and the installed version.
 
 ## Scoring
 
@@ -47,6 +47,27 @@ format                # auto-fix code style
 security-scan         # gitleaks and mobsfscan
 render-items          # regenerate the item and icon images (see Artwork below)
 ```
+
+### Clean rebuild
+
+When a build behaves strangely (stale classes, resources or generated code), rebuild from scratch, inside `devenv shell`:
+
+```sh
+./gradlew clean          # deletes build/ and app/build/
+build-debug              # or build-release, unit-test, …
+```
+
+If that isn't enough, stop the Gradle daemon and also delete the project's Gradle and Kotlin caches. They're all gitignored and recreated by the next build:
+
+```sh
+./gradlew --stop
+rm -rf build app/build .gradle .kotlin
+./gradlew :app:assembleDebug --rerun-tasks   # runs every task again, ignoring up-to-date checks
+```
+
+To also re-download dependencies, add `--refresh-dependencies` to that last command. The shared dependency cache in `~/.gradle` is left alone. To start the app itself fresh on a phone or emulator, uninstall it with `adb uninstall com.sheen.puzzler`. This also wipes its saved progress and records.
+
+### Balance tuning
 
 To rebalance after changing `levels.json`, scoring or the Endless ramp, the tuning tests play many greedy games and print suggested move pars, move limits and star thresholds, and the stage Endless runs jam at. They're slow, so they only run when asked:
 
@@ -103,7 +124,7 @@ GitHub Actions runs these workflows (in `.github/workflows/`):
 
 ## Versioning and releases
 
-Versions are `MAJOR.MINOR.PATCH`, and each release is a `vX.Y.Z` git tag with a GitHub Release that has the signed APK attached. The app's `versionName` comes from the tag, and `versionCode` is `MAJOR*10000 + MINOR*100 + PATCH`.
+Versions are `MAJOR.MINOR.PATCH`, and each release is a `vX.Y.Z` git tag with a GitHub Release that has the signed APK attached. The app's `versionName` comes from the tag (it's what the in-app About page shows; local untagged builds show 0.0.0), and `versionCode` is `MAJOR*10000 + MINOR*100 + PATCH`.
 
 - **MINOR and PATCH are automatic.** After CI passes on a push to `main`, the Release workflow reads the [Conventional Commit](https://www.conventionalcommits.org) messages since the last tag. A `feat: …` commit bumps MINOR, and a `fix: …` commit bumps PATCH. Other types (`chore:`, `docs:`, `test:`, `ci:`, `refactor:`, …) release nothing. `feat!:` does not bump MAJOR.
 - **MAJOR is manual.** Go to Actions → Release → Run workflow and type `major`.
