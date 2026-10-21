@@ -31,7 +31,7 @@ jobs:
        github.event.workflow_run.event == 'push') ||
       (github.event_name == 'workflow_dispatch' && inputs.confirm == 'major')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The commit CI tested (manual runs use the tip of main), with full history and tags for versioning.
           ref: ${{ github.event.workflow_run.head_sha || 'main' }}
