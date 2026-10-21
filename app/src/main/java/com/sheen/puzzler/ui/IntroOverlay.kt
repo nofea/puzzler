@@ -47,7 +47,7 @@ import kotlin.math.sin
 
 private val RevealEasing = CubicBezierEasing(0.4f, 0f, 0.6f, 1f)
 
-/** Intro timeline in milliseconds (docs/SPEC.md §4). */
+/** Intro timeline in milliseconds (docs/SPEC.md §5). */
 private object Intro {
     const val ITEM_STAGGER = 60f
     const val ITEM_FLIGHT = 500f

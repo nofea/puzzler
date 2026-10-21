@@ -6,15 +6,25 @@ import kotlin.random.Random
 class Board(
     val rows: Int,
     val cols: Int,
-    val colors: Int,
+    colors: Int,
     val random: Random,
     private val cells: Array<Cell>,
     private var nextId: Long = 1,
 ) {
+    /** Colors new pieces are drawn from. Endless raises it mid-run; pieces already on the board keep theirs. */
+    var colors: Int = colors
+        set(value) {
+            require(value in MIN_COLORS..MAX_COLORS)
+            field = value
+        }
+
     init {
         require(cells.size == rows * cols)
         require(colors in MIN_COLORS..MAX_COLORS)
     }
+
+    /** Id the next new piece gets; saved with an Endless run so ids stay unique after a restore. */
+    val nextPieceId get() = nextId
 
     operator fun get(pos: Pos): Cell = cells[pos.row * cols + pos.col]
 
@@ -55,6 +65,8 @@ class Board(
     fun stoneCount() = cells.count { it.isStone }
 
     fun lockedCount() = cells.count { it.locked }
+
+    fun goals() = Goals(jellyCount(), lockedCount(), stoneCount())
 
     /** Fills every empty playable cell without creating a ready-made match. */
     fun fillWithoutMatches() {

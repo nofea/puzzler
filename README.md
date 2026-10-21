@@ -1,8 +1,13 @@
 # Puzzler
 
-A match-3 puzzle game for Android, written in Kotlin with Jetpack Compose. Ten levels, each harder than the last. Score **100 points** to pass a level, and score more to earn 2 or 3 stars. See [docs/SPEC.md](docs/SPEC.md) for the full game rules.
+A match-3 puzzle game for Android, written in Kotlin with Jetpack Compose, with two modes:
 
-You match six items: fries, burgers, pizza, potted plants, soda cans and chocolate bars. A **How to play** page explains every rule with live demos. Levels 1 and 6 have guided in-level tutorials the first time you play them.
+- **Campaign:** 20 levels, each harder than the last. To pass a level, clear every obstacle on the board (jelly, locked items, stones) and score **100 points**.
+- **Endless:** one board that keeps going until you start a new run or it jams, getting harder every 500 points. It unlocks once level 10 is cleared.
+
+See [docs/SPEC.md](docs/SPEC.md) for the full game rules.
+
+You match six items: fries, burgers, pizza, potted plants, soda cans and chocolate bars. A **How to play** page explains every rule with live demos. Every level that brings in something new (levels 1–7, 11 and 16) has a guided in-level tutorial the first time you play it. Winning a level, losing one, and clearing the whole campaign each have their own splash.
 
 ## Scoring
 
@@ -16,7 +21,9 @@ You match six items: fries, burgers, pizza, potted plants, soda cans and chocola
 | Jelly cleared / stone broken | +2 / +3 | |
 | Cascades | ×1, ×1.5, ×2, … | |
 
-Levels 1–5 limit your moves. Levels 6–10 also have a timer, and running out of either one ends the level. The levels are defined in `app/src/main/assets/levels.json`.
+Levels 1–10 have no limits and can't be lost: the fewer moves you use, the more stars you earn, and reaching ★★★ finishes the level on its own. Levels 11–15 limit your moves, and levels 16–20 add a timer; running out of either before you pass is game over. There, higher scores earn ★★ and ★★★. The levels are defined in `app/src/main/assets/levels.json`.
+
+Campaign and Endless records are kept separately on the device: campaign points (the sum of each level's best score), stars and recent wins; Endless best run, best points per move, lifetime points and recent runs.
 
 ## Development environment
 
@@ -33,13 +40,21 @@ Then, from the repo:
 
 ```sh
 devenv shell          # or `direnv allow` to use .envrc
-unit-test             # engine, level, tutorial and How to play tests
+unit-test             # engine, level, Endless, records, tutorial and How to play tests
 build-debug           # app/build/outputs/apk/debug/app-debug.apk
 lint                  # ktlint, detekt and Android Lint (see Code quality below)
 format                # auto-fix code style
 security-scan         # gitleaks and mobsfscan
 render-items          # regenerate the item and icon images (see Artwork below)
 ```
+
+To rebalance after changing `levels.json`, scoring or the Endless ramp, the tuning tests play many greedy games and print suggested move pars, move limits and star thresholds, and the stage Endless runs jam at. They're slow, so they only run when asked:
+
+```sh
+PUZZLER_TUNE=1 ./gradlew :app:testDebugUnitTest --tests '*LevelTuning*' --tests '*EndlessTest*' -i --rerun
+```
+
+`PUZZLER_TUNE_SEEDS` sets the number of games (default 40 per level, 20 Endless runs) and `PUZZLER_TUNE_LEVELS=12,13` limits the level report.
 
 ## Signing a release for sideloading
 
@@ -73,7 +88,7 @@ run-emulator      # headless API 35 emulator (add --window to watch it)
 ui-test
 ```
 
-`run-emulator` turns the system animations off, which makes the tests steadier. With animations off the app also skips its launch intro, so the tests start straight on the level map. On a phone, turn animations off yourself (Developer options) before `ui-test`. Shut the emulator down with `adb emu kill`.
+`run-emulator` turns the system animations off, which makes the tests steadier. With animations off the app also skips its launch intro and the win, Game Over and finale animations, so the tests start straight on the Home screen. On a phone, turn animations off yourself (Developer options) before `ui-test`. Shut the emulator down with `adb emu kill`.
 
 ## Continuous integration
 

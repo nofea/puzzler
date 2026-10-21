@@ -93,6 +93,16 @@ object Scoring {
     ): Int = (points * multiplier(cascadeStep)).toInt()
 }
 
+/** Obstacles left on a board. In the campaign every one is a goal that must be cleared to pass. */
+data class Goals(
+    val jelly: Int = 0,
+    val locked: Int = 0,
+    val stones: Int = 0,
+) {
+    val total get() = jelly + locked + stones
+    val cleared get() = total == 0
+}
+
 /** Immutable view of the board handed to the UI. */
 data class BoardSnapshot(
     val rows: Int,
@@ -110,4 +120,6 @@ data class BoardSnapshot(
         sequence {
             for (r in 0 until rows) for (c in 0 until cols) yield(Pos(r, c))
         }
+
+    fun goals() = Goals(cells.count { it.exists && it.jelly }, cells.count { it.locked }, cells.count { it.isStone })
 }

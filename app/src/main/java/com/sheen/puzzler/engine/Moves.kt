@@ -89,20 +89,25 @@ private const val SHUFFLE_ATTEMPTS = 200
 object Shuffler {
     /**
      * Rearranges movable pieces until the board has a valid move and no ready-made match. Obstacles and locked
-     * pieces stay put. Falls back to recoloring if rearranging alone can't get there.
+     * pieces stay put. Falls back to recoloring if rearranging alone can't get there. Returns false if neither
+     * worked: the board is jammed (too few movable pieces left to ever make a move).
      */
-    fun shuffle(board: Board) {
+    fun shuffle(board: Board): Boolean {
         val positions = board.positions().filter { board[it].isMovable }.toList()
         val pieces = positions.map { board[it].piece!! }
-        repeat(SHUFFLE_ATTEMPTS) {
-            val order = pieces.shuffled(board.random)
-            positions.forEachIndexed { i, p -> board[p] = board[p].copy(piece = order[i]) }
-            if (!MatchFinder.hasMatch(board) && MoveFinder.hasMove(board)) return
-        }
-        repeat(SHUFFLE_ATTEMPTS) {
-            positions.forEach { board[it] = board[it].copy(piece = null) }
-            board.fillWithoutMatches()
-            if (!MatchFinder.hasMatch(board) && MoveFinder.hasMove(board)) return
-        }
+
+        fun settled() = !MatchFinder.hasMatch(board) && MoveFinder.hasMove(board)
+        val rearranged =
+            (1..SHUFFLE_ATTEMPTS).any {
+                val order = pieces.shuffled(board.random)
+                positions.forEachIndexed { i, p -> board[p] = board[p].copy(piece = order[i]) }
+                settled()
+            }
+        return rearranged ||
+            (1..SHUFFLE_ATTEMPTS).any {
+                positions.forEach { board[it] = board[it].copy(piece = null) }
+                board.fillWithoutMatches()
+                settled()
+            }
     }
 }

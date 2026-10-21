@@ -29,15 +29,19 @@ import com.sheen.puzzler.data.Progress
 import com.sheen.puzzler.data.ProgressRepository
 import kotlinx.coroutines.launch
 
+/** Which reset is waiting for confirmation. */
+private enum class PendingReset { CAMPAIGN, ENDLESS }
+
 @Composable
 fun SettingsScreen(
     progressRepo: ProgressRepository,
     onBack: () -> Unit,
     onRules: () -> Unit,
+    onReplayFinale: () -> Unit,
 ) {
     val progress by progressRepo.progress.collectAsState(initial = Progress())
     val scope = rememberCoroutineScope()
-    var confirmReset by remember { mutableStateOf(false) }
+    var confirmReset by remember { mutableStateOf<PendingReset?>(null) }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -57,22 +61,54 @@ fun SettingsScreen(
             Text("How to play", fontSize = 18.sp, modifier = Modifier.weight(1f))
             Text("›", fontSize = 22.sp)
         }
+        if (progress.finaleSeen) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onReplayFinale)
+                    .padding(vertical = 12.dp)
+                    .testTag("replay_finale"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Replay finale", fontSize = 18.sp, modifier = Modifier.weight(1f))
+                Text("›", fontSize = 22.sp)
+            }
+        }
         Spacer(Modifier.padding(12.dp))
-        Button(onClick = { confirmReset = true }) { Text("Reset progress") }
+        Button(onClick = { confirmReset = PendingReset.CAMPAIGN }, modifier = Modifier.testTag("reset_campaign")) { Text("Reset campaign") }
+        Spacer(Modifier.padding(4.dp))
+        Button(onClick = { confirmReset = PendingReset.ENDLESS }, modifier = Modifier.testTag("reset_endless")) { Text("Reset endless") }
     }
 
-    if (confirmReset) {
+    confirmReset?.let { pending ->
+        val (title, text) =
+            when (pending) {
+                PendingReset.CAMPAIGN -> {
+                    "Reset campaign?" to
+                        "This locks all levels except level 1, clears your campaign stars, scores and points, and brings " +
+                        "back the tutorials and the finale. Endless locks again until level 10 is cleared, but keeps its records."
+                }
+
+                PendingReset.ENDLESS -> {
+                    "Reset endless?" to "This ends your current Endless run and clears your Endless records."
+                }
+            }
         AlertDialog(
-            onDismissRequest = { confirmReset = false },
-            title = { Text("Reset progress?") },
-            text = { Text("This locks all levels except level 1, clears your stars and best scores, and brings back the tutorials.") },
+            onDismissRequest = { confirmReset = null },
+            title = { Text(title) },
+            text = { Text(text) },
             confirmButton = {
                 TextButton(onClick = {
-                    confirmReset = false
-                    scope.launch { progressRepo.reset() }
-                }) { Text("Reset") }
+                    confirmReset = null
+                    scope.launch {
+                        when (pending) {
+                            PendingReset.CAMPAIGN -> progressRepo.resetCampaign()
+                            PendingReset.ENDLESS -> progressRepo.resetEndless()
+                        }
+                    }
+                }, modifier = Modifier.testTag("confirm_reset")) { Text("Reset") }
             },
-            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmReset = null }) { Text("Cancel") } },
         )
     }
 }

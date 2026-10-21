@@ -38,7 +38,7 @@ class RulesCard(
     val table: List<Pair<String, String>> = emptyList(),
 )
 
-/** Content of the How to play pages (docs/SPEC.md §6). */
+/** Content of the How to play pages (docs/SPEC.md §7). */
 object Rules {
     // Demo boards are 5×5. Background items use colors 0-3 in a pattern with no runs; P and Q mark the pieces that
     // matter, using colors 5 (purple star) and 4 (blue hexagon) so they stand out.
@@ -172,6 +172,7 @@ object Rules {
                     "Stones don't move. Match next to one, or hit it with a special, to crack it. " +
                         "Dark stones take two hits; +3 when broken.",
                     "Chained items can't be swapped and don't fall. Include one in a match to free it.",
+                    "In the campaign every obstacle is a goal: clear them all to pass.",
                 ),
                 listOf(
                     RuleDemo(
@@ -186,12 +187,14 @@ object Rules {
                 ),
             ),
             RulesCard(
-                "Limits & stars",
+                "Goals, limits & stars",
                 listOf(
-                    "Each swap uses a move. Levels 6–10 also have a timer.",
-                    "Run out of moves or time and the level ends.",
-                    "Score 100 to pass. Higher scores earn ★★ and ★★★; each level shows its targets.",
-                    "Once you've passed, tap Finish to bank your stars, or keep playing for more.",
+                    "Clear every goal and score 100 to pass a level.",
+                    "Levels 1–10 have no limits: the fewer moves you use, the more stars. Reach ★★★ and the level finishes on its own.",
+                    "Levels 11–15 limit your moves, and 16–20 add a timer. Run out of either before you pass and it's game over; " +
+                        "there, higher scores earn ★★ and ★★★.",
+                    "Once you've passed, tap Finish to bank your stars.",
+                    "Endless has no limits or goals. Every 500 points is a new stage, and the run ends only if the board jams.",
                 ),
                 listOf(lineOf3),
             ),

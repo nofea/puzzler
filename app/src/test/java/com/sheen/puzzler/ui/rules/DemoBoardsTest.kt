@@ -18,7 +18,7 @@ class DemoBoardsTest {
 
     @Test
     fun `six cards`() {
-        assertEquals(listOf("Basics", "Scoring", "Specials", "Combos", "Obstacles", "Limits & stars"), Rules.cards.map { it.title })
+        assertEquals(listOf("Basics", "Scoring", "Specials", "Combos", "Obstacles", "Goals, limits & stars"), Rules.cards.map { it.title })
     }
 
     @Test

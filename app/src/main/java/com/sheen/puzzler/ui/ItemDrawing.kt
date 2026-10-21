@@ -20,7 +20,7 @@ import kotlin.math.sin
 
 /**
  * The six item images in color-index order: fries, burger, pizza, potted plant, soda can, chocolate bar
- * (docs/SPEC.md §7). Rendered from art/items/ by scripts/render-items.py.
+ * (docs/SPEC.md §8). Rendered from art/items/ by scripts/render-items.py.
  */
 @Composable
 fun rememberItemImages(): List<ImageBitmap> =
@@ -35,7 +35,7 @@ fun rememberItemImages(): List<ImageBitmap> =
 
 /**
  * Color bomb geometry shared by the board and the launch intro. The launcher icon (rendered by
- * scripts/render-items.py) and splash drawable use the same proportions (docs/SPEC.md §5).
+ * scripts/render-items.py) and splash drawable use the same proportions (docs/SPEC.md §6).
  */
 internal object ColorBomb {
     /** Item centers sit on a ring of this radius, as a fraction of the orb radius. */

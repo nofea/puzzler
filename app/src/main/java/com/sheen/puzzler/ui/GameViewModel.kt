@@ -5,9 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.sheen.puzzler.data.ProgressRepository
 import com.sheen.puzzler.engine.BoardSnapshot
 import com.sheen.puzzler.engine.GameEngine
+import com.sheen.puzzler.engine.Goals
 import com.sheen.puzzler.engine.MoveResult
-import com.sheen.puzzler.engine.Pattern
-import com.sheen.puzzler.engine.Phase
 import com.sheen.puzzler.engine.PhaseKind
 import com.sheen.puzzler.engine.Pos
 import com.sheen.puzzler.level.LevelDef
@@ -34,40 +33,30 @@ data class GameUiState(
     /** Board before the current animation phase; the UI animates from here to [snapshot]. */
     val previous: BoardSnapshot,
     val snapshot: BoardSnapshot,
+    /** Obstacles on the starting board: the level's goals (docs/SPEC.md §3). */
+    val startGoals: Goals,
     val phaseKind: PhaseKind? = null,
     val phaseId: Int = 0,
     val phaseMillis: Int = 0,
     val score: Int = 0,
     val movesLeft: Int,
+    val movesMade: Int = 0,
     val timeLeft: Int? = null,
     val status: GameStatus = GameStatus.PLAYING,
     val endReason: EndReason? = null,
+    /** Finished on its own: an L1–10 level passed within its 3★ move par. */
+    val autoFinished: Boolean = false,
+    /** The level-cleared or Game Over splash is still playing; the result dialog waits for it. */
+    val splash: Boolean = false,
     val busy: Boolean = false,
     val selected: Pos? = null,
     val banner: String? = null,
-    /** In-level tutorial in progress (levels 1 and 6, first play only). */
+    /** In-level tutorial in progress (first play of a level that introduces a mechanic). */
     val tutorial: TutorialState? = null,
 ) {
-    val stars get() = level.stars(score)
-    val passed get() = score >= level.target
-}
-
-sealed interface GameEvent {
-    data object Swap : GameEvent
-
-    data object Invalid : GameEvent
-
-    data class Match(
-        val cascade: Int,
-    ) : GameEvent
-
-    data object Special : GameEvent
-
-    data object Shuffle : GameEvent
-
-    data object Win : GameEvent
-
-    data object Fail : GameEvent
+    val goals get() = snapshot.goals()
+    val passed get() = level.passed(score, goals.total)
+    val stars get() = level.stars(score, movesMade, goals.total)
 }
 
 class GameViewModel(
@@ -99,7 +88,7 @@ class GameViewModel(
         viewModelScope.launch {
             val seen = level.id in progress.progress.first().tutorialsSeen
             val steps = if (seen) null else Tutorials.forLevel(level.id, engine)
-            _state.update { it.copy(busy = false, tutorial = steps?.let(::TutorialState)) }
+            _state.update { it.copy(busy = false, tutorial = steps?.let(::TutorialState)?.let(::resolved)) }
             tutorialLoading = false
         }
     }
@@ -110,6 +99,7 @@ class GameViewModel(
             level = level,
             previous = snap,
             snapshot = snap,
+            startGoals = snap.goals(),
             movesLeft = engine.movesLeft,
             timeLeft = if (level.timed) level.timeSeconds else null,
         )
@@ -186,52 +176,30 @@ class GameViewModel(
                     phaseMillis = durationOf(phase.kind),
                     score = score,
                     movesLeft = engine.movesLeft,
+                    movesMade = engine.movesMade,
                     banner = banner,
                 )
             }
-            emitEffects(phase)
+            effectsOf(phase).forEach { _events.tryEmit(it) }
             delay(durationOf(phase.kind).toLong())
         }
-        _state.update { it.copy(busy = false, banner = null, score = engine.score, movesLeft = engine.movesLeft) }
+        _state.update {
+            it.copy(busy = false, banner = null, score = engine.score, movesLeft = engine.movesLeft, movesMade = engine.movesMade)
+        }
         advanceTutorialAfterMove()
         maybeEnd()
     }
 
-    /** The banner a phase shows; null keeps the current one (swaps and falls). */
-    private fun bannerFor(phase: Phase): String? =
-        when {
-            phase.kind == PhaseKind.SHUFFLE -> "No moves — shuffling…"
-            phase.kind != PhaseKind.CLEAR -> null
-            phase.cascade >= 2 -> "Cascade x${phase.cascade}!  +${phase.scoreDelta}"
-            Pattern.LINE5 in phase.patterns -> "Line of 5!  +${phase.scoreDelta}"
-            Pattern.LT in phase.patterns -> "L / T shape!  +${phase.scoreDelta}"
-            Pattern.LINE4 in phase.patterns -> "Line of 4!  +${phase.scoreDelta}"
-            else -> "+${phase.scoreDelta}"
-        }
-
-    /** Sound and haptic events for a phase. */
-    private fun emitEffects(phase: Phase) {
-        when (phase.kind) {
-            PhaseKind.CLEAR -> {
-                _events.tryEmit(GameEvent.Match(phase.cascade))
-                if (phase.specialsFired > 0 || phase.specialsCreated.isNotEmpty()) _events.tryEmit(GameEvent.Special)
-            }
-
-            PhaseKind.SHUFFLE -> {
-                _events.tryEmit(GameEvent.Shuffle)
-            }
-
-            else -> {
-                Unit
-            }
-        }
-    }
-
-    /** Ends the level early once the target is reached, banking the stars so far. */
+    /** Ends the level once it's passed, banking the stars so far. */
     fun finish() {
         val s = _state.value
         if (s.busy || s.status != GameStatus.PLAYING || !s.passed) return
         end(EndReason.FINISHED)
+    }
+
+    /** The level-cleared or Game Over splash has played out; the result dialog shows. */
+    fun splashDone() {
+        _state.update { it.copy(splash = false) }
     }
 
     fun restart() {
@@ -273,7 +241,7 @@ class GameViewModel(
     }
 
     private fun advanceTutorial(t: TutorialState) {
-        val next = t.copy(index = t.index + 1, dormant = false)
+        val next = resolved(t.copy(index = t.index + 1, dormant = false))
         when (next.step) {
             null -> {
                 _state.update { it.copy(tutorial = null) }
@@ -292,6 +260,14 @@ class GameViewModel(
         }
     }
 
+    /** Turns a step that depends on the board as it is now (see [TutorialStep.FireSpecial]) into a concrete one. */
+    private fun resolved(t: TutorialState): TutorialState {
+        val step = t.step as? TutorialStep.FireSpecial ?: return t
+        val steps = t.steps.toMutableList()
+        steps[t.index] = Tutorials.resolveFireSpecial(step, engine)
+        return t.copy(steps = steps)
+    }
+
     private fun markTutorialSeen() {
         viewModelScope.launch { progress.markTutorialSeen(level.id) }
     }
@@ -300,29 +276,32 @@ class GameViewModel(
         val s = _state.value
         if (s.status != GameStatus.PLAYING) return
         when {
+            // Playing on after this can only cost stars (docs/SPEC.md §3).
+            !level.limited && s.passed && s.movesMade <= level.par3 -> end(EndReason.FINISHED, auto = true)
+
             !engine.canMove -> end(EndReason.OUT_OF_MOVES)
+
             s.timeLeft == 0 -> end(EndReason.OUT_OF_TIME)
         }
     }
 
-    private fun end(reason: EndReason) {
+    private fun end(
+        reason: EndReason,
+        auto: Boolean = false,
+    ) {
         timerJob?.cancel()
         val s = _state.value
         val won = s.passed
         _state.update {
-            it.copy(status = if (won) GameStatus.WON else GameStatus.FAILED, endReason = reason, selected = null, tutorial = null)
+            it.copy(
+                status = if (won) GameStatus.WON else GameStatus.FAILED,
+                endReason = reason,
+                autoFinished = auto,
+                splash = true,
+                selected = null,
+                tutorial = null,
+            )
         }
-        _events.tryEmit(if (won) GameEvent.Win else GameEvent.Fail)
-        if (won) viewModelScope.launch { progress.recordWin(level.id, s.score, s.stars) }
-    }
-
-    companion object {
-        fun durationOf(kind: PhaseKind) =
-            when (kind) {
-                PhaseKind.SWAP, PhaseKind.SWAP_BACK -> 140
-                PhaseKind.CLEAR -> 220
-                PhaseKind.FALL -> 260
-                PhaseKind.SHUFFLE -> 450
-            }
+        if (won) viewModelScope.launch { progress.recordWin(level.id, s.score, s.movesMade, s.stars) }
     }
 }
