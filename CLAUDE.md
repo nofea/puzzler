@@ -6,7 +6,7 @@ Puzzler is a match-3 Android game (Kotlin, Jetpack Compose, single `app` module,
 
 ## Environment and commands
 
-The toolchain comes from devenv (`devenv.nix`): JDK 17, Android SDK platform 35, build-tools 35.0.0. The system JDK is too new for AGP, so run Gradle inside `devenv shell` (or via direnv's `.envrc`). The SDK is in the read-only Nix store, so AGP can't download other SDK components. `buildToolsVersion` is pinned to match.
+The toolchain comes from devenv (`devenv.nix`): JDK 21 (supplied by the devenv Android module), Android SDK platform 35, build-tools 35.0.0. The system JDK is too new for AGP, so run Gradle inside `devenv shell` (or via direnv's `.envrc`). The SDK is in the read-only Nix store, so AGP can't download other SDK components. `buildToolsVersion` is pinned to match.
 
 | Task | devenv script | Gradle equivalent |
 |---|---|---|
@@ -19,6 +19,7 @@ The toolchain comes from devenv (`devenv.nix`): JDK 17, Android SDK platform 35,
 - UI tests need a device in `adb devices`. For an emulator, use `devenv --profile emulator shell`, then `run-emulator` (headless API 35 AVD `puzzler-api35`; add `--window` to watch it).
 - `assembleRelease` fails on purpose when no signing key is configured. The key comes from `keystore.properties` at the repo root (gitignored, written by `gen-keystore`) or from the `PUZZLER_KEYSTORE_FILE`, `PUZZLER_KEYSTORE_PASSWORD`, `PUZZLER_KEY_ALIAS` and `PUZZLER_KEY_PASSWORD` env vars. Never commit keystores or `keystore.properties`.
 - `verify-apk` checks the release signature, and `install-apk` runs `adb install -r` with it.
+- CI (`.github/workflows/ci.yml`) runs the unit tests and the debug build on every push and on PRs to `main`. It uses the runner's own Android SDK and Temurin 21, not devenv.
 
 ## Architecture
 
