@@ -19,17 +19,17 @@ import com.sheen.puzzler.fx.SoundPlayer
 
 /** Sound and haptic cues a game screen plays as a move animates. */
 sealed interface GameEvent {
-    data object Swap : GameEvent
+    object Swap : GameEvent
 
-    data object Invalid : GameEvent
+    object Invalid : GameEvent
 
     data class Match(
         val cascade: Int,
     ) : GameEvent
 
-    data object Special : GameEvent
+    object Special : GameEvent
 
-    data object Shuffle : GameEvent
+    object Shuffle : GameEvent
 
     data class StageUp(
         val stage: Int,

@@ -150,10 +150,22 @@ Every check is zero-tolerance: a finding fails it. Exceptions are rare and live 
 | Android Lint | Android, manifest, resource and security issues | `lint` | `CI` → Lint |
 | gitleaks | Secrets anywhere in the git history | `security-scan` | `Security` → gitleaks |
 | mobsfscan | Android-specific security issues in the code and the release manifest | `security-scan` | `Security` → mobsfscan |
-| CodeQL | Security and quality issues in the Kotlin code | — | `Security` → CodeQL |
+| CodeQL | Security and quality issues in the Kotlin code | see below | `Security` → CodeQL |
 | Dependabot | Vulnerable or outdated Gradle dependencies and Actions | — | monthly PRs; Gradle major versions are skipped |
 
 The lint job is part of CI, so a lint failure also blocks releases. The Security workflow runs on pushes and PRs to `main`, and weekly. CodeQL and mobsfscan findings appear under **Security → Code scanning** on GitHub.
+
+To run CodeQL locally with the same query suite as the `Security` workflow, inside `devenv shell`. The CLI is free for public open-source repos like this one; Nix labels it unfree, so it needs `NIXPKGS_ALLOW_UNFREE=1`.
+
+```sh
+alias codeql="NIXPKGS_ALLOW_UNFREE=1 CODEQL_ALLOW_ALL_PLATFORMS_DIST=true nix --extra-experimental-features 'nix-command flakes' shell --impure nixpkgs#codeql -c codeql"
+codeql pack download codeql/java-queries          # once
+./gradlew --stop                                    # CodeQL must see the compiler run, so no Gradle or Kotlin daemon
+codeql database create /tmp/puzzler-codeql --language=java-kotlin --overwrite \
+  --command="./gradlew :app:assembleDebug --no-build-cache --no-daemon --rerun-tasks -Pkotlin.compiler.execution.strategy=in-process"
+codeql database analyze /tmp/puzzler-codeql codeql/java-queries:codeql-suites/java-security-and-quality.qls \
+  --format=csv --output=/tmp/puzzler-codeql.csv     # one line per finding; empty means clean
+```
 
 One-time GitHub setup (Settings → Code security):
 1. Turn on **Dependabot alerts** and **Dependabot security updates**.

@@ -56,6 +56,12 @@ private object Intro {
     const val DETONATE = 1300f
     const val END = 2000f
 
+    /** The tagline fades in this long after the title. */
+    const val TAGLINE = FLASH + 100f
+
+    /** From the detonation to the end of the reveal. */
+    const val REVEAL_LENGTH = END - DETONATE
+
     fun itemStart(i: Int) = i * ITEM_STAGGER
 
     fun itemLand(i: Int) = itemStart(i) + ITEM_FLIGHT
@@ -139,7 +145,7 @@ fun IntroOverlay(
         val center = anchor?.let { it.center - origin } ?: Offset(size.width / 2, size.height / 2)
         val orb = anchor?.radius ?: 56.dp.toPx()
         val far = hypot(size.width, size.height)
-        val boom = ((t - Intro.DETONATE) / (Intro.END - Intro.DETONATE)).coerceIn(0f, 1f)
+        val boom = ((t - Intro.DETONATE) / Intro.REVEAL_LENGTH).coerceIn(0f, 1f)
 
         // Everything but the revealed circle is still splash background. It grows just far enough to clear the
         // farthest corner, evenly enough that the wipe is visible.
@@ -181,7 +187,7 @@ fun IntroOverlay(
         // Title and tagline fade and rise in after the sparkle flash, and fade out quickly on detonation.
         val fadeOut = (1f - (boom * 3f)).coerceIn(0f, 1f)
         val titleIn = ((t - Intro.FLASH) / Intro.FLASH_LENGTH).coerceIn(0f, 1f)
-        val taglineIn = ((t - Intro.FLASH - 100f) / Intro.FLASH_LENGTH).coerceIn(0f, 1f)
+        val taglineIn = ((t - Intro.TAGLINE) / Intro.FLASH_LENGTH).coerceIn(0f, 1f)
         val rise = 12.dp.toPx()
         if (titleIn > 0f) {
             val title = textMeasurer.measure("PUZZLER", titleStyle)

@@ -9,7 +9,12 @@ data class ClearOutcome(
     val specialsFired: Int,
 ) {
     val bonusPoints: Int
-        get() = (specialClears * Scoring.PER_SPECIAL_CLEAR) + (jellyCleared * Scoring.JELLY) + (stonesDestroyed * Scoring.STONE)
+        get() {
+            val specials = specialClears * Scoring.PER_SPECIAL_CLEAR
+            val jelly = jellyCleared * Scoring.JELLY
+            val stones = stonesDestroyed * Scoring.STONE
+            return specials + jelly + stones
+        }
 }
 
 /** Expands a set of cells through special-piece blasts and applies the clear to the board. */

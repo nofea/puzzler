@@ -25,7 +25,7 @@ sealed interface Target {
         val hud: HudTarget? = null,
     ) : Target
 
-    data object None : Target
+    object None : Target
 }
 
 /** One step of an in-level tutorial (docs/SPEC.md §7). */
