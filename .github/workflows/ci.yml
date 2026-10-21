@@ -29,7 +29,7 @@ jobs:
           java-version: 21
 
       # Caches Gradle and validates the wrapper jar.
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Unit tests
         run: ./gradlew :app:testDebugUnitTest --console=plain
@@ -63,7 +63,7 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       # Zero tolerance: any finding fails the job. Same checks as the local `lint` command.
       - name: Lint
@@ -99,7 +99,7 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       # Hardware acceleration for the emulator; without it an x86_64 image is far too slow to boot.
       - name: Enable KVM
