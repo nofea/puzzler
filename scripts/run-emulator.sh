@@ -12,10 +12,16 @@ if ! avdmanager list avd -c | grep -qx "$avd"; then
     echo no | avdmanager create avd -n "$avd" -k "$image" -d pixel_6 --force
 fi
 
-emulator -avd "$avd" $window_flag -no-audio -no-snapshot -gpu swiftshader_indirect &
+# devenv puts build-tools/*/lib64 on LD_LIBRARY_PATH, whose older libc++ breaks the emulator; its own libs go first.
+LD_LIBRARY_PATH="$ANDROID_HOME/emulator/lib64:${LD_LIBRARY_PATH:-}" \
+    emulator -avd "$avd" $window_flag -no-audio -no-snapshot -gpu swiftshader_indirect &
+emulator_pid=$!
 echo "Waiting for boot…"
-adb wait-for-device
-until [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; do sleep 2; done
+# Poll instead of `adb wait-for-device`, so a crashed emulator fails the script instead of hanging it.
+until [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; do
+    kill -0 "$emulator_pid" 2>/dev/null || { echo "Emulator exited before booting." >&2; exit 1; }
+    sleep 2
+done
 # Animations off makes UI tests steadier.
 adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
