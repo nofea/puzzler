@@ -31,7 +31,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: java-kotlin
           build-mode: manual
@@ -41,7 +41,7 @@ jobs:
       - name: Build
         run: ./gradlew :app:assembleDebug --no-build-cache --console=plain
 
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         with:
           category: /language:java-kotlin
 
@@ -79,7 +79,7 @@ jobs:
       - name: Scan (SARIF)
         run: mobsfscan --config .mobsf --sarif --output mobsfscan.sarif app/src/main "$RELEASE_MANIFEST" || true
 
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: mobsfscan.sarif
           category: mobsfscan
