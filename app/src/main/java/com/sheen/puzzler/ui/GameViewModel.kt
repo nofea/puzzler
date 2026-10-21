@@ -9,6 +9,9 @@ import com.sheen.puzzler.engine.Pattern
 import com.sheen.puzzler.engine.PhaseKind
 import com.sheen.puzzler.engine.Pos
 import com.sheen.puzzler.level.LevelDef
+import com.sheen.puzzler.ui.tutorial.TutorialState
+import com.sheen.puzzler.ui.tutorial.TutorialStep
+import com.sheen.puzzler.ui.tutorial.Tutorials
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -16,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -39,6 +43,8 @@ data class GameUiState(
     val busy: Boolean = false,
     val selected: Pos? = null,
     val banner: String? = null,
+    /** In-level tutorial in progress (levels 1 and 6, first play only). */
+    val tutorial: TutorialState? = null,
 ) {
     val stars get() = level.stars(score)
     val passed get() = score >= level.target
@@ -69,8 +75,24 @@ class GameViewModel(
     private var timerJob: Job? = null
     private var paused = false
 
+    /** True until we know whether this level's tutorial was already seen; input and the clock wait for it. */
+    private var tutorialLoading = false
+
     init {
+        loadTutorial()
         startTimer()
+    }
+
+    private fun loadTutorial() {
+        if (!Tutorials.hasTutorial(level.id)) return
+        tutorialLoading = true
+        _state.update { it.copy(busy = true) }
+        viewModelScope.launch {
+            val seen = level.id in progress.progress.first().tutorialsSeen
+            val steps = if (seen) null else Tutorials.forLevel(level.id, engine)
+            _state.update { it.copy(busy = false, tutorial = steps?.let(::TutorialState)) }
+            tutorialLoading = false
+        }
     }
 
     private fun initialState(): GameUiState {
@@ -92,7 +114,8 @@ class GameViewModel(
                 delay(1000)
                 val s = _state.value
                 if (s.status != GameStatus.PLAYING) break
-                if (paused) continue
+                // The clock only runs once the tutorial (if any) is out of the way.
+                if (paused || tutorialLoading || s.tutorial?.visible == true) continue
                 val left = (s.timeLeft ?: 0) - 1
                 _state.update { it.copy(timeLeft = left.coerceAtLeast(0)) }
                 if (left <= 0) {
@@ -111,6 +134,7 @@ class GameViewModel(
     fun onTap(pos: Pos) {
         val s = _state.value
         if (s.busy || s.status != GameStatus.PLAYING) return
+        if (!tutorialAllows(s.tutorial, pos)) return
         val selected = s.selected
         when {
             selected == null -> _state.update { it.copy(selected = pos) }
@@ -124,6 +148,7 @@ class GameViewModel(
         val s = _state.value
         if (s.busy || s.status != GameStatus.PLAYING) return
         if (s.timeLeft == 0) return
+        if (!tutorialAllows(s.tutorial, a, b)) return
         val result = engine.swap(a, b)
         _state.update { it.copy(selected = null) }
         if (result.phases.isEmpty()) return
@@ -166,6 +191,7 @@ class GameViewModel(
                 delay(durationOf(phase.kind).toLong())
             }
             _state.update { it.copy(busy = false, banner = null, score = engine.score, movesLeft = engine.movesLeft) }
+            advanceTutorialAfterMove()
             maybeEnd()
         }
     }
@@ -180,7 +206,56 @@ class GameViewModel(
     fun restart() {
         engine = level.newEngine()
         _state.value = initialState()
+        loadTutorial()
         startTimer()
+    }
+
+    /** Dismisses the current callout (Next / Got it). Guided swaps advance by playing the swap instead. */
+    fun nextTutorialStep() {
+        val t = _state.value.tutorial ?: return
+        if (!t.visible || t.step is TutorialStep.GuidedSwap) return
+        advanceTutorial(t)
+    }
+
+    fun skipTutorial() {
+        if (_state.value.tutorial == null) return
+        _state.update { it.copy(tutorial = null) }
+        markTutorialSeen()
+    }
+
+    /** While a tutorial callout is showing, the board only accepts the guided pair (if any). */
+    private fun tutorialAllows(t: TutorialState?, vararg cells: Pos): Boolean {
+        if (t == null || !t.visible) return true
+        val step = t.step as? TutorialStep.GuidedSwap ?: return false
+        return cells.all { it == step.a || it == step.b }
+    }
+
+    private fun advanceTutorialAfterMove() {
+        val t = _state.value.tutorial ?: return
+        when {
+            t.visible && t.step is TutorialStep.GuidedSwap -> advanceTutorial(t)
+            t.dormant && _state.value.passed -> _state.update { it.copy(tutorial = t.copy(dormant = false)) }
+        }
+    }
+
+    private fun advanceTutorial(t: TutorialState) {
+        val next = t.copy(index = t.index + 1, dormant = false)
+        when (next.step) {
+            null -> {
+                _state.update { it.copy(tutorial = null) }
+                markTutorialSeen()
+            }
+            // The rest of the tutorial is a tip that waits for the pass mark; the guided part counts as done.
+            is TutorialStep.WhenPassed -> {
+                markTutorialSeen()
+                _state.update { it.copy(tutorial = next.copy(dormant = !it.passed)) }
+            }
+            else -> _state.update { it.copy(tutorial = next) }
+        }
+    }
+
+    private fun markTutorialSeen() {
+        viewModelScope.launch { progress.markTutorialSeen(level.id) }
     }
 
     private fun maybeEnd() {
@@ -196,7 +271,9 @@ class GameViewModel(
         timerJob?.cancel()
         val s = _state.value
         val won = s.passed
-        _state.update { it.copy(status = if (won) GameStatus.WON else GameStatus.FAILED, endReason = reason, selected = null) }
+        _state.update {
+            it.copy(status = if (won) GameStatus.WON else GameStatus.FAILED, endReason = reason, selected = null, tutorial = null)
+        }
         _events.tryEmit(if (won) GameEvent.Win else GameEvent.Fail)
         if (won) viewModelScope.launch { progress.recordWin(level.id, s.score, s.stars) }
     }

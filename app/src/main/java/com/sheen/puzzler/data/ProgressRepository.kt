@@ -19,6 +19,7 @@ data class Progress(
     val levels: Map<Int, LevelProgress> = emptyMap(),
     val muted: Boolean = false,
     val haptics: Boolean = true,
+    val tutorialsSeen: Set<Int> = emptySet(),
 ) {
     fun isUnlocked(id: Int) = id <= highestUnlocked
     fun of(id: Int) = levels[id] ?: LevelProgress()
@@ -31,6 +32,7 @@ class ProgressRepository(private val context: Context, private val levelCount: I
     private val hapticsKey = booleanPreferencesKey("haptics")
     private fun bestKey(id: Int) = intPreferencesKey("best_$id")
     private fun starsKey(id: Int) = intPreferencesKey("stars_$id")
+    private fun tutorialKey(id: Int) = booleanPreferencesKey("tutorial_seen_$id")
 
     val progress: Flow<Progress> = context.dataStore.data.map { prefs ->
         Progress(
@@ -38,6 +40,7 @@ class ProgressRepository(private val context: Context, private val levelCount: I
             levels = (1..levelCount).associateWith { LevelProgress(prefs[bestKey(it)] ?: 0, prefs[starsKey(it)] ?: 0) },
             muted = prefs[mutedKey] ?: false,
             haptics = prefs[hapticsKey] ?: true,
+            tutorialsSeen = (1..levelCount).filterTo(HashSet()) { prefs[tutorialKey(it)] == true },
         )
     }
 
@@ -57,6 +60,11 @@ class ProgressRepository(private val context: Context, private val levelCount: I
 
     suspend fun setHaptics(enabled: Boolean) {
         context.dataStore.edit { it[hapticsKey] = enabled }
+    }
+
+    /** Remembers that a level's in-level tutorial was finished or skipped. [reset] brings it back. */
+    suspend fun markTutorialSeen(id: Int) {
+        context.dataStore.edit { it[tutorialKey(id)] = true }
     }
 
     suspend fun reset() {

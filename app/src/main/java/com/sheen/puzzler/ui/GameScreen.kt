@@ -2,6 +2,20 @@ package com.sheen.puzzler.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.semantics.contentDescription
+import com.sheen.puzzler.ui.tutorial.BOARD_TARGET
+import com.sheen.puzzler.ui.tutorial.HudTarget
+import com.sheen.puzzler.ui.tutorial.TutorialOverlay
+import com.sheen.puzzler.ui.tutorial.key
+import com.sheen.puzzler.ui.tutorial.tutorialTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +65,7 @@ fun GameScreen(
     hasNext: Boolean,
     onExit: () -> Unit,
     onNext: () -> Unit,
+    onRules: () -> Unit,
 ) {
     val state by vm.state.collectAsState()
     val progress by progressRepo.progress.collectAsState(initial = Progress())
@@ -92,45 +107,63 @@ fun GameScreen(
 
     BackHandler(onBack = onExit)
 
-    Column(
-        Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Hud(state)
-        Spacer(Modifier.height(8.dp))
-        Box(Modifier.height(32.dp), contentAlignment = Alignment.Center) {
-            state.banner?.let {
-                Text(it, color = PuzzlerColors.gold, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("banner"))
+    // Bounds of the HUD stats, Finish button and board, for the tutorial spotlight.
+    val targets = remember { mutableStateMapOf<String, Rect>() }
+
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Hud(state, targets, onRules)
+            Spacer(Modifier.height(8.dp))
+            Box(Modifier.height(32.dp), contentAlignment = Alignment.Center) {
+                state.banner?.let {
+                    Text(it, color = PuzzlerColors.gold, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("banner"))
+                }
+            }
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                    .padding(6.dp)
+                    .testTag("board_container")
+                    .semantics { stateDescription = if (state.busy) "busy" else "ready" },
+            ) {
+                BoardCanvas(
+                    previous = state.previous,
+                    current = state.snapshot,
+                    phaseKind = state.phaseKind,
+                    phaseId = state.phaseId,
+                    phaseMillis = state.phaseMillis,
+                    selected = state.selected,
+                    onTap = vm::onTap,
+                    onSwipe = vm::onSwipe,
+                    modifier = Modifier.fillMaxWidth().tutorialTarget(BOARD_TARGET, targets),
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                OutlinedButton(onClick = onExit) { Text("Quit") }
+                Button(
+                    onClick = vm::finish,
+                    enabled = state.passed && !state.busy && state.status == GameStatus.PLAYING,
+                    modifier = Modifier.testTag("finish_button").tutorialTarget(HudTarget.FINISH.key(), targets),
+                ) { Text("Finish ★${state.stars}") }
             }
         }
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                .padding(6.dp)
-                .testTag("board_container")
-                .semantics { stateDescription = if (state.busy) "busy" else "ready" },
-        ) {
-            BoardCanvas(
-                previous = state.previous,
-                current = state.snapshot,
-                phaseKind = state.phaseKind,
-                phaseId = state.phaseId,
-                phaseMillis = state.phaseMillis,
-                selected = state.selected,
-                onTap = vm::onTap,
+
+        state.tutorial?.takeIf { it.visible && state.status == GameStatus.PLAYING }?.let { tutorial ->
+            TutorialOverlay(
+                tutorial = tutorial,
+                targets = targets,
+                rows = state.snapshot.rows,
+                cols = state.snapshot.cols,
+                onNext = vm::nextTutorialStep,
+                onSkip = vm::skipTutorial,
                 onSwipe = vm::onSwipe,
-                modifier = Modifier.fillMaxWidth(),
+                onFinish = vm::finish,
             )
-        }
-        Spacer(Modifier.height(16.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            OutlinedButton(onClick = onExit) { Text("Quit") }
-            Button(
-                onClick = vm::finish,
-                enabled = state.passed && !state.busy && state.status == GameStatus.PLAYING,
-                modifier = Modifier.testTag("finish_button"),
-            ) { Text("Finish ★${state.stars}") }
         }
     }
 
@@ -147,43 +180,57 @@ fun GameScreen(
 }
 
 @Composable
-private fun Hud(state: GameUiState) {
+private fun Hud(state: GameUiState, targets: MutableMap<String, Rect>, onRules: () -> Unit) {
     val level = state.level
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text("Level ${level.id}", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(8.dp))
+        // How to play; leaving the screen pauses the timer like any other pause.
+        Box(
+            Modifier
+                .size(30.dp)
+                .border(1.5.dp, Color.White.copy(alpha = 0.6f), CircleShape)
+                .clip(CircleShape)
+                .clickable(onClick = onRules)
+                .testTag("rules_button")
+                .semantics { contentDescription = "How to play" },
+            contentAlignment = Alignment.Center,
+        ) { Text("?", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
         Spacer(Modifier.weight(1f))
-        Stat("Moves", "${state.movesLeft}", "moves", state.movesLeft <= 5)
+        Stat("Moves", "${state.movesLeft}", "moves", state.movesLeft <= 5, Modifier.tutorialTarget(HudTarget.MOVES.key(), targets))
         state.timeLeft?.let { left ->
             Spacer(Modifier.padding(horizontal = 8.dp))
-            Stat("Time", "%d:%02d".format(left / 60, left % 60), "time", left <= 15)
+            Stat("Time", "%d:%02d".format(left / 60, left % 60), "time", left <= 15, Modifier.tutorialTarget(HudTarget.TIME.key(), targets))
         }
     }
     Spacer(Modifier.height(8.dp))
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text("Score ", fontSize = 16.sp)
-        Text("${state.score}", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("score"))
-        Text(" / ${level.target}", fontSize = 16.sp, color = Color.White.copy(alpha = 0.7f))
-        Spacer(Modifier.weight(1f))
-        Text("★".repeat(state.stars) + "☆".repeat(3 - state.stars), color = PuzzlerColors.gold, fontSize = 22.sp)
+    Column(Modifier.fillMaxWidth().tutorialTarget(HudTarget.SCORE.key(), targets)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Score ", fontSize = 16.sp)
+            Text("${state.score}", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.testTag("score"))
+            Text(" / ${level.target}", fontSize = 16.sp, color = Color.White.copy(alpha = 0.7f))
+            Spacer(Modifier.weight(1f))
+            Text("★".repeat(state.stars) + "☆".repeat(3 - state.stars), color = PuzzlerColors.gold, fontSize = 22.sp)
+        }
+        // Bar runs to the 3-star score; the pass mark is shown in the label.
+        LinearProgressIndicator(
+            progress = { (state.score.toFloat() / level.star3).coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(10.dp).padding(top = 4.dp),
+            color = if (state.passed) PuzzlerColors.gold else MaterialTheme.colorScheme.primary,
+            trackColor = Color.White.copy(alpha = 0.15f),
+        )
+        Text(
+            "Pass ${level.target}  ·  ★★ ${level.star2}  ·  ★★★ ${level.star3}",
+            fontSize = 12.sp,
+            color = Color.White.copy(alpha = 0.6f),
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        )
     }
-    // Bar runs to the 3-star score; the pass mark is shown in the label.
-    LinearProgressIndicator(
-        progress = { (state.score.toFloat() / level.star3).coerceIn(0f, 1f) },
-        modifier = Modifier.fillMaxWidth().height(10.dp).padding(top = 4.dp),
-        color = if (state.passed) PuzzlerColors.gold else MaterialTheme.colorScheme.primary,
-        trackColor = Color.White.copy(alpha = 0.15f),
-    )
-    Text(
-        "Pass ${level.target}  ·  ★★ ${level.star2}  ·  ★★★ ${level.star3}",
-        fontSize = 12.sp,
-        color = Color.White.copy(alpha = 0.6f),
-        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-    )
 }
 
 @Composable
-private fun Stat(label: String, value: String, tag: String, warn: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun Stat(label: String, value: String, tag: String, warn: Boolean, modifier: Modifier = Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
         Text(
             value,

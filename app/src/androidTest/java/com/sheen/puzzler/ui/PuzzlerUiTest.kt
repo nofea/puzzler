@@ -9,7 +9,10 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -25,6 +28,9 @@ import com.sheen.puzzler.engine.GameEngine
 import com.sheen.puzzler.engine.MoveFinder
 import com.sheen.puzzler.engine.Pos
 import com.sheen.puzzler.level.LevelDef
+import com.sheen.puzzler.ui.rules.Rules
+import com.sheen.puzzler.ui.tutorial.TutorialStep
+import com.sheen.puzzler.ui.tutorial.Tutorials
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
@@ -43,8 +49,133 @@ class PuzzlerUiTest {
 
     private val app get() = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as PuzzlerApplication
 
+    /** Fresh progress, with the level 1 and 6 tutorials already seen so other tests play the board directly. */
     @Before
-    fun resetProgress() = runBlocking { app.progress.reset() }
+    fun resetProgress() = runBlocking {
+        app.progress.reset()
+        app.progress.markTutorialSeen(1)
+        app.progress.markTutorialSeen(6)
+    }
+
+    @Test
+    fun levelOneTutorialGuidesTheFirstSwap() {
+        runBlocking { app.progress.reset() }
+        rule.onNodeWithTag("level_1").performClick()
+        rule.waitUntilExactlyOneExists(hasTestTag("tutorial"), 5_000)
+        val mirror = app.levels.level(1).newEngine()
+        val guided = Tutorials.forLevel(1, mirror)!!.first() as TutorialStep.GuidedSwap
+
+        // While the tutorial guides, any other swap is ignored and costs nothing.
+        val other = MoveFinder.allMoves(mirror.board).first { (a, b) -> setOf(a, b) != setOf(guided.a, guided.b) }
+        swipe(other.first, other.second)
+        rule.waitForIdle()
+        rule.onNodeWithTag("moves").assertTextEquals("12")
+
+        playMove(mirror, guided.a to guided.b)
+        // The step advances once the move has finished playing out.
+        rule.waitUntilExactlyOneExists(hasAnyAncestor(hasTestTag("tutorial_card")) and hasText("Score"), 10_000)
+        rule.onNodeWithTag("tutorial_next").performClick()
+        rule.onNode(hasAnyAncestor(hasTestTag("tutorial_card")) and hasText("Moves")).assertExists()
+        rule.onNodeWithTag("tutorial_next").performClick()
+        // The last tip waits for 100 points; it shows straight away if the first move already got there.
+        if (mirror.score >= LevelDef.PASS_SCORE) rule.onNodeWithTag("tutorial_next").performClick()
+        rule.waitUntilDoesNotExist(hasTestTag("tutorial"), 5_000)
+        rule.waitUntil(5_000) { runBlocking { 1 in app.progress.progress.first().tutorialsSeen } }
+
+        // Seen once, it doesn't come back.
+        rule.onNodeWithText("Quit").performClick()
+        rule.onNodeWithTag("level_1").performClick()
+        waitReady()
+        rule.onNodeWithTag("tutorial").assertDoesNotExist()
+    }
+
+    @Test
+    fun levelOneTutorialPointsAtFinishOncePassed() {
+        runBlocking { app.progress.reset() }
+        rule.onNodeWithTag("level_1").performClick()
+        rule.waitUntilExactlyOneExists(hasTestTag("tutorial"), 5_000)
+        val mirror = app.levels.level(1).newEngine()
+        val guided = Tutorials.forLevel(1, mirror)!!.first() as TutorialStep.GuidedSwap
+        playMove(mirror, guided.a to guided.b)
+        rule.waitUntilExactlyOneExists(hasAnyAncestor(hasTestTag("tutorial_card")) and hasText("Score"), 10_000)
+        rule.onNodeWithTag("tutorial_next").performClick()
+        rule.onNodeWithTag("tutorial_next").assert(hasText("Got it")).performClick()
+        while (mirror.score < LevelDef.PASS_SCORE) {
+            rule.waitUntilDoesNotExist(hasTestTag("tutorial"), 5_000)
+            playMove(mirror, best(mirror, highest = true))
+        }
+        rule.waitUntilExactlyOneExists(hasAnyAncestor(hasTestTag("tutorial_card")) and hasText("Level passed!"), 10_000)
+        // The spotlit Finish button works through the overlay.
+        rule.onNodeWithTag("finish_button").performClick()
+        rule.waitUntilExactlyOneExists(hasTestTag("result_dialog"), 5_000)
+        rule.onNodeWithText("Level 1 cleared!").assertExists()
+    }
+
+    @Test
+    fun levelSixTutorialHoldsTheTimerUntilItEnds() {
+        runBlocking {
+            app.progress.reset()
+            app.progress.recordWin(5, score = 100, stars = 1)
+        }
+        rule.waitUntilExactlyOneExists(hasContentDescription("Level 6"), 5_000)
+        rule.onNodeWithTag("level_6").performClick()
+        rule.waitUntilExactlyOneExists(hasAnyAncestor(hasTestTag("tutorial_card")) and hasText("Timer"), 5_000)
+        Thread.sleep(2_500)
+        rule.onNodeWithTag("time").assertTextEquals("1:00")
+        for (title in listOf("Two limits", "Jelly", "Special gems")) {
+            rule.onNodeWithTag("tutorial_next").performClick()
+            rule.waitUntilExactlyOneExists(hasAnyAncestor(hasTestTag("tutorial_card")) and hasText(title), 5_000)
+            Thread.sleep(800)
+        }
+        rule.onNodeWithTag("time").assertTextEquals("1:00")
+        rule.onNodeWithTag("tutorial_next").assert(hasText("Got it")).performClick()
+        rule.waitUntilDoesNotExist(hasTestTag("tutorial"), 5_000)
+        rule.waitUntil(3_000) { timeText() != "1:00" }
+
+        // How to play pauses the clock too.
+        val before = seconds(timeText())
+        rule.onNodeWithTag("rules_button").performClick()
+        rule.waitUntilExactlyOneExists(hasTestTag("rules_page"), 5_000)
+        Thread.sleep(3_000)
+        rule.onNodeWithText("‹ Back").performClick()
+        rule.waitUntilExactlyOneExists(hasTestTag("time"), 5_000)
+        val after = seconds(timeText())
+        assertTrue("timer ran while How to play was open: $before -> $after", before - after <= 1)
+    }
+
+    @Test
+    fun skippingTheTutorialRemembersIt() {
+        runBlocking { app.progress.reset() }
+        rule.onNodeWithTag("level_1").performClick()
+        rule.waitUntilExactlyOneExists(hasTestTag("tutorial"), 5_000)
+        rule.onNodeWithTag("tutorial_skip").performClick()
+        rule.waitUntilDoesNotExist(hasTestTag("tutorial"), 5_000)
+        rule.waitUntil(5_000) { runBlocking { 1 in app.progress.progress.first().tutorialsSeen } }
+        rule.onNodeWithTag("moves").assertTextEquals("12")
+    }
+
+    @Test
+    fun rulesPageWalksThroughEveryCard() {
+        rule.onNodeWithTag("how_to_play_button").performClick()
+        rule.waitUntilExactlyOneExists(hasTestTag("rules_page"), 5_000)
+        Rules.cards.forEachIndexed { i, card ->
+            rule.waitUntil(5_000) { titleText() == card.title }
+            rule.onNodeWithTag("rules_demo").assertExists()
+            rule.onNodeWithTag("rules_next").assert(hasText(if (i == Rules.cards.lastIndex) "Done" else "Next ›")).performClick()
+        }
+        rule.waitUntilExactlyOneExists(hasTestTag("level_1"), 5_000)
+    }
+
+    @Test
+    fun rulesPageOpensFromInsideALevel() {
+        rule.onNodeWithTag("level_1").performClick()
+        waitReady()
+        rule.onNodeWithTag("rules_button").performClick()
+        rule.waitUntilExactlyOneExists(hasTestTag("rules_page"), 5_000)
+        rule.onNodeWithText("‹ Back").performClick()
+        rule.waitUntilExactlyOneExists(hasTestTag("moves"), 5_000)
+        rule.onNodeWithTag("moves").assertTextEquals("12")
+    }
 
     @Test
     fun mapShowsFirstLevelUnlockedAndSecondLocked() {
@@ -131,6 +262,15 @@ class PuzzlerUiTest {
         val score = { m: Pair<Pos, Pos> -> GameEngine(mirror.board.copy(Random(0)), 1).swap(m.first, m.second).scoreDelta }
         return if (highest) moves.maxBy(score) else moves.minBy(score)
     }
+
+    private fun titleText(): String? = runCatching {
+        rule.onNodeWithTag("rules_title").fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("") { it.text }
+    }.getOrNull()
+
+    private fun seconds(clock: String) = clock.split(":").let { (m, s) -> m.toInt() * 60 + s.toInt() }
+
+    private fun timeText(): String =
+        rule.onNodeWithTag("time").fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("") { it.text }
 
     private fun movesText(): String =
         rule.onNodeWithTag("moves").fetchSemanticsNode().config[SemanticsProperties.Text].joinToString("") { it.text }

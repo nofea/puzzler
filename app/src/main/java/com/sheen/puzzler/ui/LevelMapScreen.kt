@@ -40,6 +40,7 @@ fun LevelMapScreen(
     progressRepo: ProgressRepository,
     onPlay: (Int) -> Unit,
     onSettings: () -> Unit,
+    onRules: () -> Unit,
 ) {
     val progress by progressRepo.progress.collectAsState(initial = Progress())
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -49,6 +50,7 @@ fun LevelMapScreen(
         ) {
             Text("Puzzler", fontSize = 32.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.weight(1f))
+            TextButton(onClick = onRules, modifier = Modifier.testTag("how_to_play_button")) { Text("How to play") }
             TextButton(onClick = onSettings, modifier = Modifier.testTag("settings_button")) { Text("Settings") }
         }
         val totalStars = levels.sumOf { progress.of(it.id).stars }

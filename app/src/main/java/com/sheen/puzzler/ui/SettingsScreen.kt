@@ -1,5 +1,6 @@
 package com.sheen.puzzler.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,7 +30,7 @@ import com.sheen.puzzler.data.ProgressRepository
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(progressRepo: ProgressRepository, onBack: () -> Unit) {
+fun SettingsScreen(progressRepo: ProgressRepository, onBack: () -> Unit, onRules: () -> Unit) {
     val progress by progressRepo.progress.collectAsState(initial = Progress())
     val scope = rememberCoroutineScope()
     var confirmReset by remember { mutableStateOf(false) }
@@ -41,6 +42,13 @@ fun SettingsScreen(progressRepo: ProgressRepository, onBack: () -> Unit) {
         }
         SettingRow("Sound", !progress.muted, "sound_switch") { on -> scope.launch { progressRepo.setMuted(!on) } }
         SettingRow("Vibration", progress.haptics, "haptics_switch") { on -> scope.launch { progressRepo.setHaptics(on) } }
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onRules).padding(vertical = 12.dp).testTag("settings_how_to_play"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("How to play", fontSize = 18.sp, modifier = Modifier.weight(1f))
+            Text("›", fontSize = 22.sp)
+        }
         Spacer(Modifier.padding(12.dp))
         Button(onClick = { confirmReset = true }) { Text("Reset progress") }
     }
@@ -49,7 +57,7 @@ fun SettingsScreen(progressRepo: ProgressRepository, onBack: () -> Unit) {
         AlertDialog(
             onDismissRequest = { confirmReset = false },
             title = { Text("Reset progress?") },
-            text = { Text("This locks all levels except level 1 and clears your stars and best scores.") },
+            text = { Text("This locks all levels except level 1, clears your stars and best scores, and brings back the tutorials.") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmReset = false

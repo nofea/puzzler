@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,6 +25,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.sheen.puzzler.PuzzlerApplication
+import com.sheen.puzzler.ui.rules.RulesScreen
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -49,7 +51,9 @@ class MainActivity : ComponentActivity() {
         if (playIntro) {
             app.introShown = true
             splash.setOnExitAnimationListener { view ->
-                val icon = view.iconView
+                // The system shows an icon-less splash when the app isn't opened from the launcher (iconView throws
+                // then); the orb starts where the icon would have been, at the splash's center.
+                val icon = runCatching { view.iconView }.getOrNull() ?: view.view
                 val at = IntArray(2).also(icon::getLocationInWindow)
                 // A splash icon without a background is drawn 288dp across, larger than the icon view that hosts it,
                 // and splash_orb.xml puts the orb at radius 26 of its 108-unit canvas.
@@ -65,7 +69,9 @@ class MainActivity : ComponentActivity() {
             PuzzlerTheme {
                 Surface(Modifier.fillMaxSize()) {
                     Box(Modifier.fillMaxSize()) {
-                        PuzzlerNav(app)
+                        // Android 15 draws apps edge to edge, so keep the screens clear of the system bars. The intro
+                        // stays full-screen so it lines up with the splash.
+                        Box(Modifier.fillMaxSize().safeDrawingPadding()) { PuzzlerNav(app) }
                         if (showIntro) IntroOverlay(anchor, app.progress, onDone = { showIntro = false })
                     }
                 }
@@ -91,6 +97,7 @@ fun PuzzlerNav(app: PuzzlerApplication) {
                 progressRepo = app.progress,
                 onPlay = { id -> nav.navigate("game/$id") },
                 onSettings = { nav.navigate("settings") },
+                onRules = { nav.navigate("rules") },
             )
         }
         composable("game/{id}", arguments = listOf(navArgument("id") { type = NavType.IntType })) { entry ->
@@ -108,10 +115,14 @@ fun PuzzlerNav(app: PuzzlerApplication) {
                 onNext = {
                     nav.navigate("game/${id + 1}") { popUpTo("map") }
                 },
+                onRules = { nav.navigate("rules") },
             )
         }
         composable("settings") {
-            SettingsScreen(progressRepo = app.progress, onBack = { nav.popBackStack() })
+            SettingsScreen(progressRepo = app.progress, onBack = { nav.popBackStack() }, onRules = { nav.navigate("rules") })
+        }
+        composable("rules") {
+            RulesScreen(onBack = { nav.popBackStack() })
         }
     }
 }
