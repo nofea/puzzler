@@ -85,12 +85,22 @@ object Scoring {
     const val CASCADE_BONUS = 0.5
 
     /** Cascade step 1 is the player's own move: x1, x1.5, x2, ... */
-    fun multiplier(cascadeStep: Int): Double = 1.0 + CASCADE_BONUS * (cascadeStep - 1)
+    fun multiplier(cascadeStep: Int): Double = 1.0 + (CASCADE_BONUS * (cascadeStep - 1))
 
     fun applyMultiplier(
         points: Int,
         cascadeStep: Int,
     ): Int = (points * multiplier(cascadeStep)).toInt()
+}
+
+/** Obstacles left on a board. In the campaign every one is a goal that must be cleared to pass. */
+data class Goals(
+    val jelly: Int = 0,
+    val locked: Int = 0,
+    val stones: Int = 0,
+) {
+    val total get() = jelly + locked + stones
+    val cleared get() = total == 0
 }
 
 /** Immutable view of the board handed to the UI. */
@@ -99,15 +109,17 @@ data class BoardSnapshot(
     val cols: Int,
     val cells: List<Cell>,
 ) {
-    operator fun get(pos: Pos): Cell = cells[pos.row * cols + pos.col]
+    operator fun get(pos: Pos): Cell = cells[(pos.row * cols) + pos.col]
 
     operator fun get(
         row: Int,
         col: Int,
-    ): Cell = cells[row * cols + col]
+    ): Cell = cells[(row * cols) + col]
 
     fun positions(): Sequence<Pos> =
         sequence {
             for (r in 0 until rows) for (c in 0 until cols) yield(Pos(r, c))
         }
+
+    fun goals() = Goals(cells.count { it.exists && it.jelly }, cells.count { it.locked }, cells.count { it.isStone })
 }

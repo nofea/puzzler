@@ -24,7 +24,7 @@ object PuzzlerColors {
     val bombOrb = Color(0xFF140A26)
 
     /**
-     * Piece colors by color index. Each item's artwork is recolored to its color (docs/SPEC.md §7), so shape and color
+     * Piece colors by color index. Each item's artwork is recolored to its color (docs/SPEC.md §8), so shape and color
      * both identify a piece.
      */
     val pieces =

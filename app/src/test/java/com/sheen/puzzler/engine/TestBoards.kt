@@ -18,7 +18,7 @@ fun testBoard(
 ): Board {
     val grid =
         (0 until rows).map { r ->
-            (0 until cols).map { c -> '0' + (marks[Pos(r, c)] ?: ((r + 2 * c) % 4)) }.joinToString("")
+            (0 until cols).map { c -> '0' + (marks[Pos(r, c)] ?: ((r + (2 * c)) % 4)) }.joinToString("")
         }
     return Board.fromPieces(grid, colors = 6, random = Random(seed))
 }

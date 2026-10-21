@@ -9,7 +9,12 @@ data class ClearOutcome(
     val specialsFired: Int,
 ) {
     val bonusPoints: Int
-        get() = specialClears * Scoring.PER_SPECIAL_CLEAR + jellyCleared * Scoring.JELLY + stonesDestroyed * Scoring.STONE
+        get() {
+            val specials = specialClears * Scoring.PER_SPECIAL_CLEAR
+            val jelly = jellyCleared * Scoring.JELLY
+            val stones = stonesDestroyed * Scoring.STONE
+            return specials + jelly + stones
+        }
 }
 
 /** Expands a set of cells through special-piece blasts and applies the clear to the board. */
@@ -29,9 +34,9 @@ object Resolver {
         center: Pos,
         radius: Int,
     ): List<Pos> =
-        (center.row - radius..center.row + radius)
+        ((center.row - radius)..(center.row + radius))
             .flatMap { r ->
-                (center.col - radius..center.col + radius).map { c -> Pos(r, c) }
+                ((center.col - radius)..(center.col + radius)).map { c -> Pos(r, c) }
             }.filter(board::inBounds)
 
     /** Most common color on the board; what a color bomb takes out when another blast sets it off. */

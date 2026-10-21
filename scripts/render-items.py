@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Renders the board items and the app icon layers from the Noto Emoji sources in art/items/ (docs/SPEC.md §5, §7).
+Renders the board items and the app icon layers from the Noto Emoji sources in art/items/ (docs/SPEC.md §6, §8).
 
 Each item is recolored so its dominant color is its piece color, the canned food becomes a soda can, and the
 results are written as lossless WebP. Needs rsvg-convert and cwebp (both in the devenv shell: run `render-items`).
@@ -51,7 +51,7 @@ SODA_TAB = """
 <path style="fill:#757575;" d="M63.2,17.6h3.6v3.2h-3.6z"/>
 """
 
-# Icon geometry on the 108-unit adaptive-icon canvas (docs/SPEC.md §5).
+# Icon geometry on the 108-unit adaptive-icon canvas (docs/SPEC.md §6).
 CX = CY = 54.0
 ORB = 26.0
 RING = ORB * 0.6

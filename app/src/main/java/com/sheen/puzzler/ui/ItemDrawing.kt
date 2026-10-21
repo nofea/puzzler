@@ -20,7 +20,7 @@ import kotlin.math.sin
 
 /**
  * The six item images in color-index order: fries, burger, pizza, potted plant, soda can, chocolate bar
- * (docs/SPEC.md §7). Rendered from art/items/ by scripts/render-items.py.
+ * (docs/SPEC.md §8). Rendered from art/items/ by scripts/render-items.py.
  */
 @Composable
 fun rememberItemImages(): List<ImageBitmap> =
@@ -35,7 +35,7 @@ fun rememberItemImages(): List<ImageBitmap> =
 
 /**
  * Color bomb geometry shared by the board and the launch intro. The launcher icon (rendered by
- * scripts/render-items.py) and splash drawable use the same proportions (docs/SPEC.md §5).
+ * scripts/render-items.py) and splash drawable use the same proportions (docs/SPEC.md §6).
  */
 internal object ColorBomb {
     /** Item centers sit on a ring of this radius, as a fraction of the orb radius. */
@@ -48,7 +48,7 @@ internal object ColorBomb {
     const val SPARKLE = 0.23f
 
     /** Angle of item [index] on the ring: the first at the top, then clockwise. */
-    fun angle(index: Int): Double = -PI / 2 + 2 * PI * index / PuzzlerColors.pieces.size
+    fun angle(index: Int): Double = (-PI / 2) + (2 * PI * index / PuzzlerColors.pieces.size)
 
     /** Unit direction from the orb center toward item [index]. */
     fun direction(index: Int) = Offset(cos(angle(index)).toFloat(), sin(angle(index)).toFloat())
@@ -81,7 +81,7 @@ internal fun DrawScope.drawItem(
     val side = size.roundToInt()
     drawImage(
         image,
-        dstOffset = IntOffset((center.x - size / 2).roundToInt(), (center.y - size / 2).roundToInt()),
+        dstOffset = IntOffset((center.x - (size / 2)).roundToInt(), (center.y - (size / 2)).roundToInt()),
         dstSize = IntSize(side, side),
         alpha = alpha,
         filterQuality = FilterQuality.Medium,
@@ -97,7 +97,7 @@ internal fun DrawScope.drawColorBomb(
 ) {
     drawCircle(PuzzlerColors.bombOrb.copy(alpha = alpha), radius, center)
     images.indices.forEach { i ->
-        drawItem(images, i, center + ColorBomb.direction(i) * (radius * ColorBomb.RING), radius * ColorBomb.ITEM, alpha, shadow = false)
+        drawItem(images, i, center + (ColorBomb.direction(i) * (radius * ColorBomb.RING)), radius * ColorBomb.ITEM, alpha, shadow = false)
     }
     drawPath(sparklePath(center, radius * ColorBomb.SPARKLE), PuzzlerColors.gold.copy(alpha = alpha))
 }
@@ -110,7 +110,7 @@ internal fun sparklePath(
     Path().apply {
         for (i in 0 until 8) {
             val rr = if (i % 2 == 0) r else r * 0.3f
-            val a = -PI / 2 + i * PI / 4
+            val a = (-PI / 2) + (i * PI / 4)
             val p = Offset(c.x + (cos(a) * rr).toFloat(), c.y + (sin(a) * rr).toFloat())
             if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
         }

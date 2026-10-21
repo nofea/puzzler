@@ -1,6 +1,6 @@
 package com.sheen.puzzler.engine
 
-enum class PhaseKind { SWAP, SWAP_BACK, CLEAR, FALL, SHUFFLE }
+enum class PhaseKind { SWAP, SWAP_BACK, CLEAR, FALL, OBSTACLE, SHUFFLE }
 
 /** One animatable step of a move. [snapshot] is the board after the step. */
 data class Phase(
@@ -24,28 +24,47 @@ data class MoveResult(
 /** Bomb + bomb clears a 5×5 square: radius 2 around the swap. */
 private const val BOMB_PAIR_RADIUS = 2
 
+/** Move limit meaning "no limit" (campaign levels 1–10 and Endless). */
+const val UNLIMITED = 0
+
 /**
- * Rules for one level: owns the board, the score and the move count. Time limits are enforced by the caller,
- * since the engine has no clock.
+ * Rules for one level or Endless run: owns the board, the score and the move count. Time limits are enforced by the
+ * caller, since the engine has no clock.
+ *
+ * [moves] is the move limit; [UNLIMITED] means none. With [endless] set, each move also applies the Endless ramp
+ * (more colors, obstacles appearing; see [Endless]). [score] and [movesMade] restore a saved Endless run.
  */
 class GameEngine(
     val board: Board,
     moves: Int,
+    val endless: Boolean = false,
+    score: Int = 0,
+    movesMade: Int = 0,
 ) {
-    var score = 0
+    /** True if the level has a move limit. */
+    val limited = moves != UNLIMITED
+
+    var score = score
         private set
     var movesLeft = moves
         private set
-    var movesMade = 0
+    var movesMade = movesMade
+        private set
+
+    /** The board is dead and no shuffle can fix it; nothing more can be played. Only happens in Endless. */
+    var jammed = false
         private set
 
     init {
         // Initial board from a layout: fill, and make sure the first position is playable and calm.
         board.fillWithoutMatches()
-        if (MatchFinder.hasMatch(board) || !MoveFinder.hasMove(board)) Shuffler.shuffle(board)
+        if (MatchFinder.hasMatch(board) || !MoveFinder.hasMove(board)) jammed = !Shuffler.shuffle(board)
     }
 
-    val canMove get() = movesLeft > 0
+    val canMove get() = !jammed && (!limited || movesLeft > 0)
+
+    /** Endless stage for the current score. */
+    val stage get() = Endless.stage(score)
 
     fun snapshot() = board.snapshot()
 
@@ -77,7 +96,7 @@ class GameEngine(
         val pa = board[a].piece!!
         val pb = board[b].piece!!
         swapPieces(a, b)
-        movesLeft--
+        if (limited) movesLeft--
         movesMade++
         val phases = mutableListOf(Phase(PhaseKind.SWAP, board.snapshot()))
 
@@ -94,9 +113,13 @@ class GameEngine(
         }
         phases += cascadeLoop(cascade, swapped = if (combo == null) listOf(b, a) else emptyList(), swapHorizontal = a.row == b.row)
 
+        if (endless) {
+            // New colors only reach pieces spawned from the next move on.
+            board.colors = Endless.colors(stage)
+            if (Endless.addObstacles(board, stage) > 0) phases += Phase(PhaseKind.OBSTACLE, board.snapshot())
+        }
         if (!MoveFinder.hasMove(board)) {
-            Shuffler.shuffle(board)
-            phases += Phase(PhaseKind.SHUFFLE, board.snapshot())
+            if (Shuffler.shuffle(board)) phases += Phase(PhaseKind.SHUFFLE, board.snapshot()) else jammed = true
         }
         return MoveResult(true, phases)
     }
@@ -212,8 +235,8 @@ class GameEngine(
             }
 
             else -> {
-                (at.row - 1..at.row + 1).filter { it in 0 until board.rows }.flatMap { Resolver.row(board, it) } +
-                    (at.col - 1..at.col + 1).filter { it in 0 until board.cols }.flatMap { Resolver.column(board, it) }
+                ((at.row - 1)..(at.row + 1)).filter { it in 0 until board.rows }.flatMap { Resolver.row(board, it) } +
+                    ((at.col - 1)..(at.col + 1)).filter { it in 0 until board.cols }.flatMap { Resolver.column(board, it) }
             }
         }
 

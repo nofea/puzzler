@@ -71,7 +71,7 @@ val appVersionCode =
         val (major, minor, patch) = parts
         require(minor < 100 && patch < 100) { "versionCode scheme needs MINOR and PATCH below 100: $appVersion" }
         // Untagged dev builds (0.0.0) still need a positive versionCode.
-        (major * 10_000 + minor * 100 + patch).coerceAtLeast(1)
+        ((major * 10_000) + (minor * 100) + patch).coerceAtLeast(1)
     }
 
 android {
@@ -110,6 +110,9 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
+            // No native code of our own, so no native symbol tables for crash reports; skipping them also avoids
+            // AGP looking for the NDK devenv doesn't install (see packaging below).
+            ndk.debugSymbolLevel = "NONE"
         }
     }
 
@@ -122,6 +125,12 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+    packaging {
+        // The app has no native code; the only .so files come from AndroidX AARs, which ship them already stripped.
+        // Skipping the strip step avoids AGP looking for an NDK, which devenv doesn't install (its local.properties
+        // still names one, so every release build warned CXX1102). Revisit if a dependency ever ships unstripped libs.
+        jniLibs.keepDebugSymbols += "**/*.so"
     }
     testOptions {
         unitTests.isReturnDefaultValues = true

@@ -1,8 +1,13 @@
 # Puzzler
 
-A match-3 puzzle game for Android, written in Kotlin with Jetpack Compose. Ten levels, each harder than the last. Score **100 points** to pass a level, and score more to earn 2 or 3 stars. See [docs/SPEC.md](docs/SPEC.md) for the full game rules.
+A match-3 puzzle game for Android by **Sheen Games**, written in Kotlin with Jetpack Compose, with two modes:
 
-You match six items: fries, burgers, pizza, potted plants, soda cans and chocolate bars. A **How to play** page explains every rule with live demos. Levels 1 and 6 have guided in-level tutorials the first time you play them.
+- **Campaign:** 20 levels, each harder than the last. To pass a level, clear every obstacle on the board (jelly, locked items, stones) and score **100 points**.
+- **Endless:** one board that keeps going until you start a new run or it jams, getting harder every 500 points. It unlocks once level 10 is cleared.
+
+See [docs/SPEC.md](docs/SPEC.md) for the full game rules.
+
+You match six items: fries, burgers, pizza, potted plants, soda cans and chocolate bars. A **How to play** page explains every rule with live demos. Every level that brings in something new (levels 1–7, 11 and 16) has a guided in-level tutorial the first time you play it. Winning a level, losing one, and clearing the whole campaign each have their own splash. The **About** page on the Home screen shows the creator and the installed version.
 
 ## Scoring
 
@@ -16,7 +21,9 @@ You match six items: fries, burgers, pizza, potted plants, soda cans and chocola
 | Jelly cleared / stone broken | +2 / +3 | |
 | Cascades | ×1, ×1.5, ×2, … | |
 
-Levels 1–5 limit your moves. Levels 6–10 also have a timer, and running out of either one ends the level. The levels are defined in `app/src/main/assets/levels.json`.
+Levels 1–10 have no limits and can't be lost: the fewer moves you use, the more stars you earn, and reaching ★★★ finishes the level on its own. Levels 11–15 limit your moves, and levels 16–20 add a timer; running out of either before you pass is game over. There, higher scores earn ★★ and ★★★. The levels are defined in `app/src/main/assets/levels.json`.
+
+Campaign and Endless records are kept separately on the device: campaign points (the sum of each level's best score), stars and recent wins; Endless best run, best points per move, lifetime points and recent runs.
 
 ## Development environment
 
@@ -33,13 +40,42 @@ Then, from the repo:
 
 ```sh
 devenv shell          # or `direnv allow` to use .envrc
-unit-test             # engine, level, tutorial and How to play tests
+unit-test             # engine, level, Endless, records, tutorial and How to play tests
 build-debug           # app/build/outputs/apk/debug/app-debug.apk
 lint                  # ktlint, detekt and Android Lint (see Code quality below)
 format                # auto-fix code style
 security-scan         # gitleaks and mobsfscan
 render-items          # regenerate the item and icon images (see Artwork below)
 ```
+
+### Clean rebuild
+
+When a build behaves strangely (stale classes, resources or generated code), rebuild from scratch, inside `devenv shell`:
+
+```sh
+./gradlew clean          # deletes build/ and app/build/
+build-debug              # or build-release, unit-test, …
+```
+
+If that isn't enough, stop the Gradle daemon and also delete the project's Gradle and Kotlin caches. They're all gitignored and recreated by the next build:
+
+```sh
+./gradlew --stop
+rm -rf build app/build .gradle .kotlin
+./gradlew :app:assembleDebug --rerun-tasks   # runs every task again, ignoring up-to-date checks
+```
+
+To also re-download dependencies, add `--refresh-dependencies` to that last command. The shared dependency cache in `~/.gradle` is left alone. To start the app itself fresh on a phone or emulator, uninstall it with `adb uninstall com.sheen.puzzler`. This also wipes its saved progress and records.
+
+### Balance tuning
+
+To rebalance after changing `levels.json`, scoring or the Endless ramp, the tuning tests play many greedy games and print suggested move pars, move limits and star thresholds, and the stage Endless runs jam at. They're slow, so they only run when asked:
+
+```sh
+PUZZLER_TUNE=1 ./gradlew :app:testDebugUnitTest --tests '*LevelTuning*' --tests '*EndlessTest*' -i --rerun
+```
+
+`PUZZLER_TUNE_SEEDS` sets the number of games (default 40 per level, 20 Endless runs) and `PUZZLER_TUNE_LEVELS=12,13` limits the level report.
 
 ## Signing a release for sideloading
 
@@ -73,7 +109,7 @@ run-emulator      # headless API 35 emulator (add --window to watch it)
 ui-test
 ```
 
-`run-emulator` turns the system animations off, which makes the tests steadier. With animations off the app also skips its launch intro, so the tests start straight on the level map. On a phone, turn animations off yourself (Developer options) before `ui-test`. Shut the emulator down with `adb emu kill`.
+`run-emulator` turns the system animations off, which makes the tests steadier. With animations off the app also skips its launch intro and the win, Game Over and finale animations, so the tests start straight on the Home screen. On a phone, turn animations off yourself (Developer options) before `ui-test`. Shut the emulator down with `adb emu kill`.
 
 ## Continuous integration
 
@@ -88,7 +124,7 @@ GitHub Actions runs these workflows (in `.github/workflows/`):
 
 ## Versioning and releases
 
-Versions are `MAJOR.MINOR.PATCH`, and each release is a `vX.Y.Z` git tag with a GitHub Release that has the signed APK attached. The app's `versionName` comes from the tag, and `versionCode` is `MAJOR*10000 + MINOR*100 + PATCH`.
+Versions are `MAJOR.MINOR.PATCH`, and each release is a `vX.Y.Z` git tag with a GitHub Release that has the signed APK attached. The app's `versionName` comes from the tag (it's what the in-app About page shows; local untagged builds show 0.0.0), and `versionCode` is `MAJOR*10000 + MINOR*100 + PATCH`.
 
 - **MINOR and PATCH are automatic.** After CI passes on a push to `main`, the Release workflow reads the [Conventional Commit](https://www.conventionalcommits.org) messages since the last tag. A `feat: …` commit bumps MINOR, and a `fix: …` commit bumps PATCH. Other types (`chore:`, `docs:`, `test:`, `ci:`, `refactor:`, …) release nothing. `feat!:` does not bump MAJOR.
 - **MAJOR is manual.** Go to Actions → Release → Run workflow and type `major`.
@@ -114,10 +150,22 @@ Every check is zero-tolerance: a finding fails it. Exceptions are rare and live 
 | Android Lint | Android, manifest, resource and security issues | `lint` | `CI` → Lint |
 | gitleaks | Secrets anywhere in the git history | `security-scan` | `Security` → gitleaks |
 | mobsfscan | Android-specific security issues in the code and the release manifest | `security-scan` | `Security` → mobsfscan |
-| CodeQL | Security and quality issues in the Kotlin code | — | `Security` → CodeQL |
-| Dependabot | Vulnerable or outdated Gradle dependencies and Actions | — | weekly PRs |
+| CodeQL | Security and quality issues in the Kotlin code | see below | `Security` → CodeQL |
+| Dependabot | Vulnerable or outdated Gradle dependencies and Actions | — | monthly PRs; Gradle major versions are skipped |
 
 The lint job is part of CI, so a lint failure also blocks releases. The Security workflow runs on pushes and PRs to `main`, and weekly. CodeQL and mobsfscan findings appear under **Security → Code scanning** on GitHub.
+
+To run CodeQL locally with the same query suite as the `Security` workflow, inside `devenv shell`. The CLI is free for public open-source repos like this one; Nix labels it unfree, so it needs `NIXPKGS_ALLOW_UNFREE=1`.
+
+```sh
+alias codeql="NIXPKGS_ALLOW_UNFREE=1 CODEQL_ALLOW_ALL_PLATFORMS_DIST=true nix --extra-experimental-features 'nix-command flakes' shell --impure nixpkgs#codeql -c codeql"
+codeql pack download codeql/java-queries          # once
+./gradlew --stop                                    # CodeQL must see the compiler run, so no Gradle or Kotlin daemon
+codeql database create /tmp/puzzler-codeql --language=java-kotlin --overwrite \
+  --command="./gradlew :app:assembleDebug --no-build-cache --no-daemon --rerun-tasks -Pkotlin.compiler.execution.strategy=in-process"
+codeql database analyze /tmp/puzzler-codeql codeql/java-queries:codeql-suites/java-security-and-quality.qls \
+  --format=csv --output=/tmp/puzzler-codeql.csv     # one line per finding; empty means clean
+```
 
 One-time GitHub setup (Settings → Code security):
 1. Turn on **Dependabot alerts** and **Dependabot security updates**.

@@ -4,7 +4,11 @@ updates:
   - package-ecosystem: gradle
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    # Major upgrades (e.g. AGP 8 → 9) need migration work, so they're done by hand.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     # "build(deps): bump …" passes the PR title check and doesn't trigger a release.
     commit-message:
       prefix: build
@@ -18,8 +22,9 @@ updates:
   # Versions of the actions used in .github/workflows.
   - package-ecosystem: github-actions
     directory: /
+    # Majors aren't ignored here: workflows pin actions by major (@v4), so a major bump is the only update they get.
     schedule:
-      interval: weekly
+      interval: monthly
     commit-message:
       prefix: ci
       include: scope

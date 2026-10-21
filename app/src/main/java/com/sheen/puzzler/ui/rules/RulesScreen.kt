@@ -32,7 +32,7 @@ import com.sheen.puzzler.ui.PuzzlerColors
 import com.sheen.puzzler.ui.PuzzlerFonts
 import kotlinx.coroutines.launch
 
-/** How to play: one swipeable card per topic, each with a looping demo (docs/SPEC.md §6). */
+/** How to play: one swipeable card per topic, each with a looping demo (docs/SPEC.md §7). */
 @Composable
 fun RulesScreen(onBack: () -> Unit) {
     val cards = Rules.cards

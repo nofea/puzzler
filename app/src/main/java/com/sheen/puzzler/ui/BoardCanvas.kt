@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import com.sheen.puzzler.engine.BoardSnapshot
@@ -33,12 +34,17 @@ import com.sheen.puzzler.engine.PhaseKind
 import com.sheen.puzzler.engine.Piece
 import com.sheen.puzzler.engine.Pos
 import com.sheen.puzzler.engine.Special
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sign
+import kotlin.math.sin
 
 /**
  * Draws the board and animates each engine phase: pieces are matched between [previous] and [current] by id,
  * slide from old to new position, cleared pieces shrink away, and new pieces drop in from above.
+ *
+ * [hop] (0..1) plays the level-cleared hop, and [collapse] (0..1) the Game Over collapse where the items fall off the
+ * board (docs/SPEC.md §5); both sweep across the columns.
  */
 @Composable
 fun BoardCanvas(
@@ -51,6 +57,8 @@ fun BoardCanvas(
     onTap: (Pos) -> Unit,
     onSwipe: (Pos, Pos) -> Unit,
     modifier: Modifier = Modifier,
+    hop: Float = 0f,
+    collapse: Float = 0f,
 ) {
     val progress = remember { Animatable(1f) }
     LaunchedEffect(phaseId) {
@@ -99,12 +107,12 @@ fun BoardCanvas(
         val t = progress.value
         val cell = size.width / cols
         drawTiles(current, previous, t, cell)
-        drawPieces(images, spritesAt(previous, current, phaseKind, t), cell)
-        drawOverlays(previous, current, t, cell)
+        drawPieces(images, swept(spritesAt(previous, current, phaseKind, t), rows, cols, hop, collapse), cell)
+        drawOverlays(previous, current, t, cell, 1f - collapse)
         if (selected != null) {
             drawRoundRect(
                 Color.White,
-                topLeft = Offset(selected.col * cell + 2, selected.row * cell + 2),
+                topLeft = Offset((selected.col * cell) + 2, (selected.row * cell) + 2),
                 size = Size(cell - 4, cell - 4),
                 cornerRadius = CornerRadius(cell * 0.18f),
                 style = Stroke(width = cell * 0.06f),
@@ -150,6 +158,8 @@ private class Sprite(
     val col: Float,
     val scale: Float = 1f,
     val alpha: Float = 1f,
+    /** Rotation in degrees. */
+    val spin: Float = 0f,
 )
 
 /**
@@ -189,7 +199,7 @@ private fun spritesAt(
                 }
 
                 else -> {
-                    Sprite(piece, pos.row.toFloat(), pos.col.toFloat(), scale = 0.4f + 0.6f * t)
+                    Sprite(piece, pos.row.toFloat(), pos.col.toFloat(), scale = 0.4f + (0.6f * t))
                 } // a new special pops in
             }
         }
@@ -199,7 +209,7 @@ private fun spritesAt(
     val cleared =
         before.values
             .filter { (_, piece) -> piece.id !in currentIds }
-            .map { (pos, piece) -> Sprite(piece, pos.row.toFloat(), pos.col.toFloat(), 0.6f + 0.6f * shrink, shrink) }
+            .map { (pos, piece) -> Sprite(piece, pos.row.toFloat(), pos.col.toFloat(), 0.6f + (0.6f * shrink), shrink) }
     return sprites + cleared
 }
 
@@ -209,6 +219,42 @@ private fun placed(board: BoardSnapshot): List<Pair<Pos, Piece>> =
 
 private fun placedById(board: BoardSnapshot): Map<Long, Pair<Pos, Piece>> = placed(board).associateBy { it.second.id }
 
+/** Each column starts its hop or collapse this much (as a fraction of the whole animation) after the one to its left. */
+private const val COLUMN_STAGGER = 0.05f
+
+/** Progress (0..1) of column [col]'s share of a staggered sweep at overall progress [t]. */
+private fun columnProgress(
+    t: Float,
+    col: Float,
+    cols: Int,
+): Float {
+    val span = 1f - (COLUMN_STAGGER * (cols - 1))
+    return ((t - (COLUMN_STAGGER * col)) / span).coerceIn(0f, 1f)
+}
+
+/** Applies the level-cleared [hop] and the Game Over [collapse] (both 0..1) to the sprites. */
+private fun swept(
+    sprites: List<Sprite>,
+    rows: Int,
+    cols: Int,
+    hop: Float,
+    collapse: Float,
+): List<Sprite> {
+    if (hop == 0f && collapse == 0f) return sprites
+    return sprites.map { sprite ->
+        var dy = 0f
+        var spin = 0f
+        if (hop > 0f) dy -= sin(PI * columnProgress(hop, sprite.col, cols)).toFloat() * HOP_HEIGHT
+        if (collapse > 0f) {
+            // Falls under gravity past the bottom edge, turning a little one way or the other.
+            val f = columnProgress(collapse, sprite.col, cols)
+            dy += f * f * (rows + 1)
+            spin = f * COLLAPSE_SPIN * (if (sprite.piece.id % 2 == 0L) 1 else -1)
+        }
+        Sprite(sprite.piece, sprite.row + dy, sprite.col, sprite.scale, sprite.alpha, spin)
+    }
+}
+
 private fun DrawScope.drawPieces(
     images: List<ImageBitmap>,
     sprites: List<Sprite>,
@@ -217,15 +263,22 @@ private fun DrawScope.drawPieces(
     for (sprite in sprites) {
         if (sprite.row < -0.5f) continue // still above the board
         val center = Offset((sprite.col + 0.5f) * cell, (sprite.row + 0.5f) * cell)
-        drawPiece(images, sprite.piece, center, cell * 0.40f * sprite.scale, sprite.alpha)
+        rotate(sprite.spin, center) { drawPiece(images, sprite.piece, center, cell * 0.40f * sprite.scale, sprite.alpha) }
     }
 }
+
+/** Peak of the level-cleared hop, in cells. */
+private const val HOP_HEIGHT = 0.25f
+
+/** How far (degrees) an item turns while falling off the board on Game Over. */
+private const val COLLAPSE_SPIN = 50f
 
 private fun DrawScope.drawOverlays(
     previous: BoardSnapshot,
     current: BoardSnapshot,
     t: Float,
     cell: Float,
+    lockAlpha: Float,
 ) {
     val samePrev = previous.rows == current.rows && previous.cols == current.cols
     for (pos in current.positions()) {
@@ -242,7 +295,7 @@ private fun DrawScope.drawOverlays(
             drawStone(topLeft, cell, hp, alpha)
         }
         val wasLocked = samePrev && previous[pos].locked
-        if (c.locked || wasLocked) drawLock(topLeft, cell, if (c.locked) 1f else 1f - t)
+        if (c.locked || wasLocked) drawLock(topLeft, cell, (if (c.locked) 1f else 1f - t) * lockAlpha)
     }
 }
 
@@ -257,7 +310,7 @@ private fun DrawScope.drawStone(
     drawRoundRect(
         base.copy(alpha = alpha),
         topLeft = topLeft + Offset(inset, inset),
-        size = Size(cell - 2 * inset, cell - 2 * inset),
+        size = Size(cell - (2 * inset), cell - (2 * inset)),
         cornerRadius = CornerRadius(cell * 0.12f),
     )
     drawRoundRect(
@@ -270,10 +323,10 @@ private fun DrawScope.drawStone(
         // A crack shows the stone is one hit from breaking.
         val crack =
             Path().apply {
-                moveTo(topLeft.x + cell * 0.3f, topLeft.y + cell * 0.15f)
-                lineTo(topLeft.x + cell * 0.5f, topLeft.y + cell * 0.45f)
-                lineTo(topLeft.x + cell * 0.4f, topLeft.y + cell * 0.6f)
-                lineTo(topLeft.x + cell * 0.65f, topLeft.y + cell * 0.85f)
+                moveTo(topLeft.x + (cell * 0.3f), topLeft.y + (cell * 0.15f))
+                lineTo(topLeft.x + (cell * 0.5f), topLeft.y + (cell * 0.45f))
+                lineTo(topLeft.x + (cell * 0.4f), topLeft.y + (cell * 0.6f))
+                lineTo(topLeft.x + (cell * 0.65f), topLeft.y + (cell * 0.85f))
             }
         drawPath(crack, Color.Black.copy(alpha = 0.5f * alpha), style = Stroke(cell * 0.05f, cap = StrokeCap.Round))
     }
@@ -308,7 +361,7 @@ private fun DrawScope.drawPiece(
     alpha: Float,
 ) {
     if (piece.special == Special.COLOR_BOMB) {
-        // Same design and proportions as the launcher icon (docs/SPEC.md §5).
+        // Same design and proportions as the launcher icon (docs/SPEC.md §6).
         drawColorBomb(images, center, radius, alpha)
         return
     }
@@ -351,4 +404,4 @@ private fun lerp(
     a: Float,
     b: Float,
     t: Float,
-) = a + (b - a) * t
+) = a + ((b - a) * t)

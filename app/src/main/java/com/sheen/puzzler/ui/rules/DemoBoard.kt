@@ -32,8 +32,8 @@ import com.sheen.puzzler.engine.BoardSnapshot
 import com.sheen.puzzler.engine.PhaseKind
 import com.sheen.puzzler.engine.Pos
 import com.sheen.puzzler.ui.BoardCanvas
-import com.sheen.puzzler.ui.GameViewModel
 import com.sheen.puzzler.ui.PuzzlerColors
+import com.sheen.puzzler.ui.durationOf
 import com.sheen.puzzler.ui.tutorial.drawSwipeHint
 import kotlinx.coroutines.delay
 
@@ -79,7 +79,7 @@ fun DemoBoard(
                         previous = current
                         current = phase.snapshot
                         phaseKind = phase.kind
-                        phaseMillis = GameViewModel.durationOf(phase.kind)
+                        phaseMillis = durationOf(phase.kind)
                         phaseId++
                         score += phase.scoreDelta
                         moves = engine.movesLeft

@@ -106,17 +106,26 @@ fun TutorialOverlay(
 
     fun cellRect(p: Pos) =
         Rect(
-            board!!.left + p.col * cell,
-            board.top + p.row * cell,
-            board.left + (p.col + 1) * cell,
-            board.top + (p.row + 1) * cell,
+            board!!.left + (p.col * cell),
+            board.top + (p.row * cell),
+            board.left + ((p.col + 1) * cell),
+            board.top + ((p.row + 1) * cell),
         )
     val pad = with(density) { 6.dp.toPx() }
     val holes: List<Rect> =
         when (val target = step.target) {
-            is Target.Hud -> listOfNotNull(targets[target.key.key()]?.translate(-origin)?.inflate(pad))
-            is Target.Cells -> if (board == null) emptyList() else target.cells.map { cellRect(it).inflate(-cell * 0.03f) }
-            Target.None -> emptyList()
+            is Target.Hud -> {
+                listOfNotNull(targets[target.key.key()]?.translate(-origin)?.inflate(pad))
+            }
+
+            is Target.Cells -> {
+                val cells = if (board == null) emptyList() else target.cells.map { cellRect(it).inflate(-cell * 0.03f) }
+                cells + listOfNotNull(target.hud?.let { targets[it.key()]?.translate(-origin)?.inflate(pad) })
+            }
+
+            Target.None -> {
+                emptyList()
+            }
         }
     val finishHole = (step.target as? Target.Hud)?.takeIf { it.key == HudTarget.FINISH }?.let { holes.firstOrNull() }
     val guided = step as? TutorialStep.GuidedSwap
@@ -177,7 +186,7 @@ fun TutorialOverlay(
             }
             holes.forEach {
                 drawRoundRect(
-                    PuzzlerColors.gold.copy(alpha = 0.45f + 0.55f * pulse),
+                    PuzzlerColors.gold.copy(alpha = 0.45f + (0.55f * pulse)),
                     topLeft = it.topLeft,
                     size = it.size,
                     cornerRadius = CornerRadius(12.dp.toPx()),
@@ -197,8 +206,8 @@ fun TutorialOverlay(
         val cardTop =
             when {
                 avoid == null || focus == null -> (overlayHeight - cardHeight) / 2f
-                overlayHeight - avoid.bottom >= cardHeight + 2 * gap -> avoid.bottom + gap
-                avoid.top >= cardHeight + 2 * gap -> avoid.top - gap - cardHeight
+                overlayHeight - avoid.bottom >= cardHeight + (2 * gap) -> avoid.bottom + gap
+                avoid.top >= cardHeight + (2 * gap) -> avoid.top - gap - cardHeight
                 focus.center.y > overlayHeight / 2f -> focus.top - gap - cardHeight
                 else -> focus.bottom + gap
             }.coerceIn(0f, (overlayHeight - cardHeight).coerceAtLeast(0).toFloat())

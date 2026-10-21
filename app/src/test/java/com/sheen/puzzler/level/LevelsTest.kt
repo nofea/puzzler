@@ -1,6 +1,5 @@
 package com.sheen.puzzler.level
 
-import com.sheen.puzzler.engine.GameEngine
 import com.sheen.puzzler.engine.MatchFinder
 import com.sheen.puzzler.engine.MoveFinder
 import org.junit.Assert.assertEquals
@@ -8,32 +7,52 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import kotlin.random.Random
 
 class LevelsTest {
     // Unit tests run with the module directory as working directory.
     private val levels = LevelParser.parse(File("src/main/assets/levels.json").readText())
 
     @Test
-    fun `ten levels that get harder`() {
-        assertEquals((1..10).toList(), levels.map { it.id })
+    fun `twenty levels in three tiers`() {
+        assertEquals((1..20).toList(), levels.map { it.id })
         assertTrue(levels.all { it.target == LevelDef.PASS_SCORE })
-        levels.zipWithNext().forEach { (a, b) ->
-            assertTrue("moves shouldn't grow without a timer: ${a.id}->${b.id}", b.moves <= a.moves || (b.timed && !a.timed))
-            assertTrue(b.colors >= a.colors)
-        }
-        levels.forEach { assertTrue(it.star2 > it.target && it.star3 > it.star2) }
-        assertTrue(levels.take(5).none { it.timed })
-        assertTrue(levels.drop(5).all { it.timed })
+        // L1-10: no limits; L11-15: move limit; L16-20: move limit and timer.
+        assertTrue(levels.take(10).none { it.limited || it.timed })
+        assertTrue(levels.subList(10, 15).all { it.limited && !it.timed })
+        assertTrue(levels.drop(15).all { it.limited && it.timed })
+        levels.filter { it.limited }.forEach { assertTrue("level ${it.id}", it.star2 > it.target && it.star3 > it.star2) }
+        levels.filterNot { it.limited }.forEach { assertTrue("level ${it.id}", it.par3 < it.par2) }
     }
 
     @Test
-    fun `stars`() {
-        val l = levels.first()
-        assertEquals(0, l.stars(99))
-        assertEquals(1, l.stars(100))
-        assertEquals(2, l.stars(l.star2))
-        assertEquals(3, l.stars(l.star3))
+    fun `each mechanic first appears where its tutorial is`() {
+        fun has(
+            id: Int,
+            ch: Char,
+        ) = levels[id - 1].layout.any { ch in it }
+
+        fun firstWith(vararg chars: Char) = levels.first { l -> chars.any { has(l.id, it) } }.id
+        assertEquals(3, firstWith('J', 'K'))
+        assertEquals(4, firstWith('L', 'K'))
+        assertEquals(5, firstWith('S', 'T'))
+        assertEquals(7, firstWith('T', '#'))
+        assertEquals(8, levels.first { it.colors == 6 }.id)
+    }
+
+    @Test
+    fun `stars come from moves on unlimited levels and from score on limited ones`() {
+        val free = levels.first()
+        assertEquals(0, free.stars(score = 99, movesUsed = 1, goalsLeft = 0))
+        assertEquals(0, free.stars(score = 500, movesUsed = 1, goalsLeft = 1))
+        assertEquals(3, free.stars(score = 100, movesUsed = free.par3, goalsLeft = 0))
+        assertEquals(2, free.stars(score = 100, movesUsed = free.par2, goalsLeft = 0))
+        assertEquals(1, free.stars(score = 100, movesUsed = free.par2 + 1, goalsLeft = 0))
+
+        val limited = levels.first { it.limited }
+        assertEquals(0, limited.stars(score = limited.star3, movesUsed = 1, goalsLeft = 2))
+        assertEquals(1, limited.stars(score = 100, movesUsed = 99, goalsLeft = 0))
+        assertEquals(2, limited.stars(score = limited.star2, movesUsed = 99, goalsLeft = 0))
+        assertEquals(3, limited.stars(score = limited.star3, movesUsed = 99, goalsLeft = 0))
     }
 
     @Test
@@ -53,34 +72,33 @@ class LevelsTest {
         assertEquals(level.newEngine().snapshot(), level.newEngine().snapshot())
     }
 
-    /** Plays the move that scores most right now (simulated on a copy), until moves run out. */
-    private fun greedyScore(
-        level: LevelDef,
-        seed: Long,
-    ): Int {
-        val engine = level.newEngine(seed)
-        val rng = Random(seed)
-        while (engine.canMove) {
-            val moves = MoveFinder.allMoves(engine.board)
-            val best =
-                moves.maxBy { (a, b) ->
-                    val sim = GameEngine(engine.board.copy(Random(rng.nextLong())), 1)
-                    sim.swap(a, b).scoreDelta
-                }
-            engine.swap(best.first, best.second)
+    @Test
+    fun `a greedy player always passes the levels without limits`() {
+        for (level in levels.filterNot { it.limited }) {
+            val moves = (1..SEEDS).map { Bots.greedyGame(level, it * 7919L, MAX_FREE_MOVES, stopWhenPassed = true).passedAt }
+            println("level ${level.id}: moves to pass $moves (★★★ ≤ ${level.par3}, ★★ ≤ ${level.par2})")
+            assertTrue("level ${level.id}: a greedy player got stuck: $moves", moves.none { it == null })
         }
-        return engine.score
     }
 
     @Test
-    fun `a greedy player can pass every level most of the time`() {
-        val seeds = 10
-        val report =
-            levels.map { level ->
-                val scores = (1..seeds).map { greedyScore(level, it * 7919L) }
-                Triple(level.id, scores.count { it >= level.target }, scores.average())
+    fun `a greedy player passes the limited levels less often as they get harder`() {
+        val rates =
+            levels.filter { it.limited }.associate { level ->
+                val games = (1..SEEDS).map { Bots.greedyGame(level, it * 7919L, level.moves, stopWhenPassed = true) }
+                level.id to games.count { it.passedAt != null }
             }
-        report.forEach { (id, wins, avg) -> println("level $id: $wins/$seeds passed, avg score ${"%.0f".format(avg)}") }
-        report.forEach { (id, wins, _) -> assertTrue("level $id passed only $wins/$seeds", wins >= seeds * 6 / 10) }
+        rates.forEach { (id, wins) -> println("level $id: $wins/$SEEDS passed") }
+        // About 90% on L11 down to about 50% on L20 (docs/SPEC.md §3); loose bounds for a small sample.
+        assertTrue("level 11 passed ${rates[11]}/$SEEDS", rates.getValue(11) >= SEEDS * 6 / 10)
+        rates.forEach { (id, wins) -> assertTrue("level $id passed only $wins/$SEEDS", wins >= SEEDS * 2 / 10) }
+        assertTrue("level 20 is too easy: ${rates[20]}/$SEEDS", rates.getValue(20) <= SEEDS * 9 / 10)
+    }
+
+    private companion object {
+        const val SEEDS = 10
+
+        /** A greedy player that hasn't passed a level without limits by now is stuck on an unreachable goal. */
+        const val MAX_FREE_MOVES = 150
     }
 }

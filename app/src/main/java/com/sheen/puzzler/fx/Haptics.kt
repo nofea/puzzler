@@ -32,4 +32,10 @@ class Haptics(
     fun heavy() = vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK))
 
     fun win() = vibrate(VibrationEffect.createWaveform(longArrayOf(0, 60, 80, 60, 80, 160), -1))
+
+    /** Game Over slam: one long, strong buzz. */
+    fun slam() = vibrate(VibrationEffect.createOneShot(220, VibrationEffect.DEFAULT_AMPLITUDE))
+
+    /** Finale: a run of short pulses, like fireworks going off. */
+    fun celebrate() = vibrate(VibrationEffect.createWaveform(longArrayOf(0, 40, 90, 40, 140, 60, 90, 40, 200, 80, 120, 40), -1))
 }
