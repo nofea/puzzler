@@ -20,6 +20,7 @@ The toolchain comes from devenv (`devenv.nix`): JDK 21 (supplied by the devenv A
 - `assembleRelease` fails on purpose when no signing key is configured. The key comes from `keystore.properties` at the repo root (gitignored, written by `gen-keystore`) or from the `PUZZLER_KEYSTORE_FILE`, `PUZZLER_KEYSTORE_PASSWORD`, `PUZZLER_KEY_ALIAS` and `PUZZLER_KEY_PASSWORD` env vars. Never commit keystores or `keystore.properties`.
 - `verify-apk` checks the release signature, and `install-apk` runs `adb install -r` with it.
 - CI (`.github/workflows/ci.yml`) runs on every push and on PRs to `main`. The `build` job runs the unit tests and the debug build. The `ui-test` job runs after it and executes `connectedDebugAndroidTest` on an API 35 emulator (`reactivecircus/android-emulator-runner`, AVD snapshot cached). Both use the runner's own Android SDK and Temurin 21, not devenv.
+- Releases (`release.yml`) are tagged `vX.Y.Z` and run after CI passes on `main`. `feat:` commits bump MINOR and `fix:` commits bump PATCH. MAJOR is only bumped by running the workflow by hand. Commit messages and PR titles must therefore follow Conventional Commits (`pr-title.yml` checks titles). The app version comes from `-PpuzzlerVersion`, else the latest tag, else 0.0.0 (see `app/build.gradle.kts`). The bump logic lives in `scripts/next-version.sh`.
 
 ## Architecture
 

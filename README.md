@@ -66,3 +66,20 @@ devenv --profile emulator shell
 run-emulator      # headless API 35 emulator (add --window to watch it)
 ui-test
 ```
+
+## Versioning and releases
+
+Versions are `MAJOR.MINOR.PATCH`, and each release is a `vX.Y.Z` git tag with a GitHub Release that has the signed APK attached. The app's `versionName` comes from the tag, and `versionCode` is `MAJOR*10000 + MINOR*100 + PATCH`.
+
+- **MINOR and PATCH are automatic.** After CI passes on a push to `main`, the Release workflow reads the [Conventional Commit](https://www.conventionalcommits.org) messages since the last tag. A `feat: …` commit bumps MINOR, and a `fix: …` commit bumps PATCH. Other types (`chore:`, `docs:`, `test:`, `ci:`, `refactor:`, …) release nothing. `feat!:` does not bump MAJOR.
+- **MAJOR is manual.** Go to Actions → Release → Run workflow and type `major`.
+- **Format is enforced on PR titles.** PRs are squash-merged, so the title becomes the commit on `main`. The PR title check rejects titles that don't follow the format.
+- `scripts/next-version.sh` prints the version the next release would get. Local builds take their version from the latest tag, so run `git fetch --tags` first.
+
+One-time GitHub setup:
+
+1. Settings → Secrets and variables → Actions → add these repository secrets:
+   - `PUZZLER_KEYSTORE_BASE64`: the output of `base64 -w0 ~/.android-keys/puzzler-release.jks`
+   - `PUZZLER_KEYSTORE_PASSWORD` and `PUZZLER_KEY_PASSWORD`: the keystore password. `gen-keystore` makes a PKCS12 store, which uses the same password for both.
+   - `PUZZLER_KEY_ALIAS`: `puzzler`
+2. Settings → General → Pull Requests: allow squash merging, with the default commit message set to "Pull request title". Turn off merge commits and rebase merging, so `main` gets exactly one commit per PR.

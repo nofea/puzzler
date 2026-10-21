@@ -31,6 +31,27 @@ fun loadReleaseKey(): ReleaseKey? {
 
 val releaseKey = loadReleaseKey()
 
+/**
+ * App version X.Y.Z: `-PpuzzlerVersion=X.Y.Z` (CI passes the release tag's version), else the latest vX.Y.Z git tag,
+ * else 0.0.0. versionCode is X*10000 + Y*100 + Z, so it rises with every release as Android requires for updates.
+ */
+fun latestTagVersion(): String? = runCatching {
+    providers.exec {
+        commandLine("git", "describe", "--tags", "--abbrev=0", "--match", "v[0-9]*.[0-9]*.[0-9]*")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim().removePrefix("v").ifBlank { null }
+}.getOrNull()
+
+val appVersion = providers.gradleProperty("puzzlerVersion").orNull ?: latestTagVersion() ?: "0.0.0"
+val appVersionCode = run {
+    val parts = Regex("""(\d+)\.(\d+)\.(\d+)""").matchEntire(appVersion)?.destructured?.toList()?.map(String::toInt)
+        ?: throw GradleException("Version '$appVersion' is not MAJOR.MINOR.PATCH")
+    val (major, minor, patch) = parts
+    require(minor < 100 && patch < 100) { "versionCode scheme needs MINOR and PATCH below 100: $appVersion" }
+    // Untagged dev builds (0.0.0) still need a positive versionCode.
+    (major * 10_000 + minor * 100 + patch).coerceAtLeast(1)
+}
+
 android {
     namespace = "com.sheen.puzzler"
     compileSdk = 35
@@ -41,8 +62,8 @@ android {
         applicationId = "com.sheen.puzzler"
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = appVersionCode
+        versionName = appVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -1,0 +1,97 @@
+name: Release
+
+# MINOR/PATCH: after CI passes on a push to main, feat commits bump MINOR and fix commits bump PATCH.
+# MAJOR: run this workflow by hand from the Actions tab.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type "major" to release the next MAJOR version from main
+        required: true
+
+# One release at a time, so each run sees the tag the previous one created.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push') ||
+      (github.event_name == 'workflow_dispatch' && inputs.confirm == 'major')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The commit CI tested (manual runs use the tip of main), with full history and tags for versioning.
+          ref: ${{ github.event.workflow_run.head_sha || 'main' }}
+          fetch-depth: 0
+
+      - name: Next version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            version="$(scripts/next-version.sh --major)"
+          else
+            version="$(scripts/next-version.sh)"
+          fi
+          if [[ -z "$version" ]]; then
+            echo "No feat or fix commits since the last release; nothing to release."
+          elif git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "v$version already exists; nothing to release."
+            version=""
+          else
+            echo "Releasing v$version"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        if: steps.version.outputs.version != ''
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.version.outputs.version != ''
+
+      - name: Signed release APK
+        if: steps.version.outputs.version != ''
+        env:
+          PUZZLER_KEYSTORE_BASE64: ${{ secrets.PUZZLER_KEYSTORE_BASE64 }}
+          PUZZLER_KEYSTORE_PASSWORD: ${{ secrets.PUZZLER_KEYSTORE_PASSWORD }}
+          PUZZLER_KEY_ALIAS: ${{ secrets.PUZZLER_KEY_ALIAS }}
+          PUZZLER_KEY_PASSWORD: ${{ secrets.PUZZLER_KEY_PASSWORD }}
+        run: |
+          if [[ -z "$PUZZLER_KEYSTORE_BASE64" ]]; then
+            echo "::error::Repository secret PUZZLER_KEYSTORE_BASE64 is not set (see README, Releases)."
+            exit 1
+          fi
+          export PUZZLER_KEYSTORE_FILE="$RUNNER_TEMP/release.jks"
+          base64 --decode <<<"$PUZZLER_KEYSTORE_BASE64" > "$PUZZLER_KEYSTORE_FILE"
+          ./gradlew :app:assembleRelease -PpuzzlerVersion=${{ steps.version.outputs.version }} --console=plain
+          rm -f "$PUZZLER_KEYSTORE_FILE"
+          scripts/verify-apk.sh
+          mv app/build/outputs/apk/release/app-release.apk "puzzler-${{ steps.version.outputs.version }}.apk"
+
+      - name: Tag and publish release
+        if: steps.version.outputs.version != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          scripts/release-notes.sh > notes.md
+          [[ -s notes.md ]] || echo "Major release." > notes.md
+          gh release create "v$VERSION" "puzzler-$VERSION.apk" \
+            --target "$(git rev-parse HEAD)" \
+            --title "Puzzler $VERSION" \
+            --notes-file notes.md
