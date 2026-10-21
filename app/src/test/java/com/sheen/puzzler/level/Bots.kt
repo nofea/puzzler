@@ -33,7 +33,7 @@ object Bots {
             val sim = GameEngine(engine.board.copy(Random(rng.nextLong())), 1)
             val goalsBefore = sim.board.goals().total
             val delta = sim.swap(a, b).scoreDelta
-            delta + GOAL_WEIGHT * (goalsBefore - sim.board.goals().total)
+            delta + (GOAL_WEIGHT * (goalsBefore - sim.board.goals().total))
         }
 
     /**

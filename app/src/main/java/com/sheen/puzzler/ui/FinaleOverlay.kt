@@ -111,7 +111,7 @@ fun FinaleOverlay(
                 fx.haptics.heavy()
             }
             while (bursts < Finale.fireworks.size && t >= Finale.fireworks[bursts]) {
-                if (t < Finale.fireworks[bursts] + Finale.FIREWORK / 3) {
+                if (t < Finale.fireworks[bursts] + (Finale.FIREWORK / 3)) {
                     fx.sound.play(Sfx.SPARKLE)
                     if (bursts == 0) fx.haptics.celebrate()
                 }
@@ -127,8 +127,8 @@ fun FinaleOverlay(
     val titleStyle = TextStyle(fontFamily = PuzzlerFonts.display, fontSize = 30.sp, color = PuzzlerColors.gold)
     val starsStyle = TextStyle(fontFamily = PuzzlerFonts.display, fontSize = 26.sp, color = Color.White)
     val hintStyle = TextStyle(fontSize = 16.sp, color = Color.White.copy(alpha = 0.8f))
-    val confetti = remember { List(Finale.CONFETTI) { Confetto(Random(it * 97 + 13)) } }
-    val sparks = remember { Finale.fireworks.indices.map { Firework(Random(it * 31 + 7)) } }
+    val confetti = remember { List(Finale.CONFETTI) { Confetto(Random((it * 97) + 13)) } }
+    val sparks = remember { Finale.fireworks.indices.map { Firework(Random((it * 31) + 7)) } }
 
     Canvas(
         Modifier
@@ -153,8 +153,8 @@ fun FinaleOverlay(
             images.indices.forEach { i ->
                 if (t < Finale.itemStart(i)) return@forEach
                 val f = FastOutSlowInEasing.transform(((t - Finale.itemStart(i)) / Finale.ITEM_FLIGHT).coerceIn(0f, 1f))
-                val dist = far + (orb * ColorBomb.RING - far) * f
-                drawItem(images, i, center + ColorBomb.direction(i) * dist, orb * ColorBomb.ITEM, shadow = false)
+                val dist = far + (((orb * ColorBomb.RING) - far) * f)
+                drawItem(images, i, center + (ColorBomb.direction(i) * dist), orb * ColorBomb.ITEM, shadow = false)
             }
         }
 
@@ -172,8 +172,8 @@ fun FinaleOverlay(
                 val fall = local % 1f
                 val pos =
                     Offset(
-                        c.x * size.width + sin(local * 2 * PI.toFloat() * c.sway) * 24.dp.toPx(),
-                        -40.dp.toPx() + fall * (size.height + 80.dp.toPx()),
+                        (c.x * size.width) + (sin(local * 2 * PI.toFloat() * c.sway) * 24.dp.toPx()),
+                        -40.dp.toPx() + (fall * (size.height + 80.dp.toPx())),
                     )
                 rotate(local * 360f * c.spin, pos) { drawItem(images, i % images.size, pos, 30.dp.toPx(), shadow = false) }
             }
@@ -187,18 +187,18 @@ fun FinaleOverlay(
         val titleIn = ((t - Finale.TITLE) / Finale.TITLE_IN).coerceIn(0f, 1f)
         if (titleIn > 0f) {
             val title = measurer.measure("ALL LEVELS COMPLETE!", titleStyle)
-            val s = 0.6f + 0.4f * FastOutSlowInEasing.transform(titleIn)
+            val s = 0.6f + (0.4f * FastOutSlowInEasing.transform(titleIn))
             val top = size.height * 0.55f
-            withTransform({ scale(s, s, Offset(center.x, top + title.size.height / 2f)) }) {
-                drawText(title, topLeft = Offset(center.x - title.size.width / 2f, top), alpha = titleIn)
+            withTransform({ scale(s, s, Offset(center.x, top + (title.size.height / 2f))) }) {
+                drawText(title, topLeft = Offset(center.x - (title.size.width / 2f), top), alpha = titleIn)
             }
             val count = (totalStars * ((t - Finale.COUNT_FROM) / (Finale.COUNT_TO - Finale.COUNT_FROM)).coerceIn(0f, 1f)).toInt()
             val stars = measurer.measure("★ $count / $maxStars", starsStyle)
-            drawText(stars, topLeft = Offset(center.x - stars.size.width / 2f, top + title.size.height + 12.dp.toPx()), alpha = titleIn)
+            drawText(stars, topLeft = Offset(center.x - (stars.size.width / 2f), top + title.size.height + 12.dp.toPx()), alpha = titleIn)
             val hintIn = ((t - Finale.CONTINUE) / Finale.CONTINUE_IN).coerceIn(0f, 1f)
             if (hintIn > 0f) {
                 val hint = measurer.measure("Tap to continue", hintStyle)
-                drawText(hint, topLeft = Offset(center.x - hint.size.width / 2f, size.height * 0.85f), alpha = hintIn)
+                drawText(hint, topLeft = Offset(center.x - (hint.size.width / 2f), size.height * 0.85f), alpha = hintIn)
             }
         }
     }
@@ -218,10 +218,10 @@ private class Confetto(
 private class Firework(
     rng: Random,
 ) {
-    private val x = 0.15f + 0.7f * rng.nextFloat()
-    private val y = 0.1f + 0.4f * rng.nextFloat()
+    private val x = 0.15f + (0.7f * rng.nextFloat())
+    private val y = 0.1f + (0.4f * rng.nextFloat())
     private val color = PuzzlerColors.pieces[rng.nextInt(PuzzlerColors.pieces.size)]
-    private val reach = 0.18f + 0.1f * rng.nextFloat()
+    private val reach = 0.18f + (0.1f * rng.nextFloat())
 
     fun draw(
         scope: DrawScope,
@@ -232,16 +232,16 @@ private class Firework(
         val center = Offset(x * width, y * height)
         val fade = 1f - f
         // A bright bloom where it bursts, then streaking sparks that droop as they fade.
-        if (f < 0.25f) drawCircle(Color.White.copy(alpha = 1f - f * 4f), radius = 18.dp.toPx() * (1f + f * 4f), center = center)
+        if (f < 0.25f) drawCircle(Color.White.copy(alpha = 1f - (f * 4f)), radius = 18.dp.toPx() * (1f + (f * 4f)), center = center)
         val r = FastOutSlowInEasing.transform(f) * reach * width
-        val trail = 14.dp.toPx() * fade + 2.dp.toPx()
+        val trail = (14.dp.toPx() * fade) + 2.dp.toPx()
         for (k in 0 until Finale.SPARKS) {
             val a = 2 * PI * k / Finale.SPARKS
             val dir = Offset(cos(a).toFloat(), sin(a).toFloat())
             val droop = Offset(0f, f * f * 40.dp.toPx())
-            val tip = center + dir * r + droop
-            drawLine(color.copy(alpha = fade), tip - dir * trail, tip, strokeWidth = 3.dp.toPx() * fade + 1f, cap = StrokeCap.Round)
-            drawCircle(Color.White.copy(alpha = fade), radius = 2.5.dp.toPx() * fade + 1f, center = tip)
+            val tip = center + (dir * r) + droop
+            drawLine(color.copy(alpha = fade), tip - (dir * trail), tip, strokeWidth = (3.dp.toPx() * fade) + 1f, cap = StrokeCap.Round)
+            drawCircle(Color.White.copy(alpha = fade), radius = (2.5.dp.toPx() * fade) + 1f, center = tip)
         }
     }
 }

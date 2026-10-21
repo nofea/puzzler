@@ -59,6 +59,6 @@ class LevelTuning {
         const val MIN_PAR_GAP = 2
 
         /** About 90% of greedy games pass L11, falling steadily to about 50% on L20. */
-        fun targetPassRate(id: Int) = 0.9 - (id - 11) * 0.4 / 9
+        fun targetPassRate(id: Int) = 0.9 - ((id - 11) * 0.4 / 9)
     }
 }

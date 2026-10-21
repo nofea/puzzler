@@ -26,12 +26,12 @@ object Endless {
     fun newEngine(random: Random) =
         GameEngine(Board.fromLayout(List(SIZE) { ".".repeat(SIZE) }, START_COLORS, random), UNLIMITED, endless = true)
 
-    fun stage(score: Int) = score / STAGE_POINTS + 1
+    fun stage(score: Int) = (score / STAGE_POINTS) + 1
 
     fun colors(stage: Int) = (START_COLORS + stage - 1).coerceAtMost(Board.MAX_COLORS)
 
     /** Average obstacles added per move at [stage]. */
-    fun obstacleRate(stage: Int): Double = if (stage < OBSTACLE_STAGE) 0.0 else BASE_RATE + RATE_STEP * (stage - OBSTACLE_STAGE)
+    fun obstacleRate(stage: Int): Double = if (stage < OBSTACLE_STAGE) 0.0 else BASE_RATE + (RATE_STEP * (stage - OBSTACLE_STAGE))
 
     /**
      * After a move settles: turns random normal items into locked items or 1-hit stones, [obstacleRate] of them on

@@ -6,10 +6,12 @@
     <issue id="NewerVersionAvailable" severity="ignore" />
     <issue id="AndroidGradlePluginVersion" severity="ignore" />
     <issue id="OldTargetApi" severity="ignore" />
-    <!-- Puzzler is a portrait game: the HUD, board and dialogs are laid out for portrait only. -->
+    <!-- Puzzler is a portrait game: the HUD, board and dialogs are laid out for portrait only. Newer lint words this
+         "Fixed screen orientations will be ignored … starting from Android 16"; that only applies to apps targeting
+         API 36 on large screens, and Puzzler targets 35. Supporting landscape would be a layout change, not a fix. -->
     <issue id="LockedOrientationActivity" severity="ignore" />
     <issue id="DiscouragedApi">
-        <ignore regexp="fixed orientation" />
+        <ignore regexp="(?i)fixed (screen )?orientation" />
     </issue>
     <!-- Lint sizes the adaptive icon's monochrome layer like a legacy 48dp icon; adaptive layers are 108dp
          (the foreground layer, same size, isn't flagged). Rendered by scripts/render-items.py. -->

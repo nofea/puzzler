@@ -459,7 +459,7 @@ class PuzzlerUiTest {
         return if (highest) moves.maxBy(score) else moves.minBy(score)
     }
 
-    private fun seconds(clock: String) = clock.split(":").let { (m, s) -> m.toInt() * 60 + s.toInt() }
+    private fun seconds(clock: String) = clock.split(":").let { (m, s) -> (m.toInt() * 60) + s.toInt() }
 
     private fun textOrNull(tag: String): String? = runCatching { text(tag) }.getOrNull()
 

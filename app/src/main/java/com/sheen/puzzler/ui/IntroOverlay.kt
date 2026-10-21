@@ -154,9 +154,9 @@ fun IntroOverlay(
         clipPath(hole, ClipOp.Difference) {
             drawRect(PuzzlerColors.background)
             if (boom < 1f) {
-                drawCircle(PuzzlerColors.bombOrb.copy(alpha = 1f - boom), orb * (1f + 0.3f * boom), center)
+                drawCircle(PuzzlerColors.bombOrb.copy(alpha = 1f - boom), orb * (1f + (0.3f * boom)), center)
                 val flash = ((t - Intro.FLASH) / Intro.FLASH_LENGTH).coerceIn(0f, 1f)
-                val sparkleScale = 1f + 0.6f * sin(PI * flash).toFloat()
+                val sparkleScale = 1f + (0.6f * sin(PI * flash).toFloat())
                 drawPath(sparklePath(center, orb * ColorBomb.SPARKLE * sparkleScale), PuzzlerColors.gold.copy(alpha = 1f - boom))
             }
         }
@@ -170,27 +170,27 @@ fun IntroOverlay(
                 val dist =
                     if (t < Intro.DETONATE) {
                         val f = FastOutSlowInEasing.transform(((t - Intro.itemStart(i)) / Intro.ITEM_FLIGHT).coerceIn(0f, 1f))
-                        far + (ring - far) * f
+                        far + ((ring - far) * f)
                     } else {
-                        ring + far * FastOutLinearInEasing.transform(boom)
+                        ring + (far * FastOutLinearInEasing.transform(boom))
                     }
-                drawItem(images, i, center + dir * dist, orb * ColorBomb.ITEM, shadow = false)
+                drawItem(images, i, center + (dir * dist), orb * ColorBomb.ITEM, shadow = false)
             }
         }
 
         // Title and tagline fade and rise in after the sparkle flash, and fade out quickly on detonation.
-        val fadeOut = (1f - boom * 3f).coerceIn(0f, 1f)
+        val fadeOut = (1f - (boom * 3f)).coerceIn(0f, 1f)
         val titleIn = ((t - Intro.FLASH) / Intro.FLASH_LENGTH).coerceIn(0f, 1f)
         val taglineIn = ((t - Intro.FLASH - 100f) / Intro.FLASH_LENGTH).coerceIn(0f, 1f)
         val rise = 12.dp.toPx()
         if (titleIn > 0f) {
             val title = textMeasurer.measure("PUZZLER", titleStyle)
-            val top = center.y + orb + 28.dp.toPx() + rise * (1f - titleIn)
-            drawText(title, topLeft = Offset(center.x - title.size.width / 2f, top), alpha = titleIn * fadeOut)
+            val top = center.y + orb + 28.dp.toPx() + (rise * (1f - titleIn))
+            drawText(title, topLeft = Offset(center.x - (title.size.width / 2f), top), alpha = titleIn * fadeOut)
             if (taglineIn > 0f) {
                 val tagline = textMeasurer.measure("Match. Cascade. Detonate.", taglineStyle)
-                val taglineTop = center.y + orb + 28.dp.toPx() + title.size.height + 4.dp.toPx() + rise * (1f - taglineIn)
-                drawText(tagline, topLeft = Offset(center.x - tagline.size.width / 2f, taglineTop), alpha = taglineIn * fadeOut)
+                val taglineTop = center.y + orb + 28.dp.toPx() + title.size.height + 4.dp.toPx() + (rise * (1f - taglineIn))
+                drawText(tagline, topLeft = Offset(center.x - (tagline.size.width / 2f), taglineTop), alpha = taglineIn * fadeOut)
             }
         }
     }

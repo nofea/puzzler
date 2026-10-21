@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
                 // and splash_orb.xml puts the orb at radius 26 of its 108-unit canvas.
                 anchor =
                     OrbAnchor(
-                        center = Offset(at[0] + icon.width / 2f, at[1] + icon.height / 2f),
+                        center = Offset(at[0] + (icon.width / 2f), at[1] + (icon.height / 2f)),
                         radius = SPLASH_ICON_DP * resources.displayMetrics.density * 26f / 108f,
                     )
                 view.remove()

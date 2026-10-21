@@ -96,7 +96,7 @@ object ClearedSplash {
     const val STAR_GAP = 233f
     const val STAMP = 150f
 
-    fun starAt(i: Int) = POP + i * STAR_GAP
+    fun starAt(i: Int) = POP + (i * STAR_GAP)
 
     fun cues(
         stars: Int,
@@ -143,7 +143,7 @@ private fun ease(f: Float) = FastOutSlowInEasing.transform(f.coerceIn(0f, 1f))
 /** A pop that overshoots a little before settling at 1. */
 private fun pop(f: Float): Float {
     val x = f.coerceIn(0f, 1f)
-    return 1f + 0.25f * sin(x * PI).toFloat() - (1f - ease(x)) * 0.7f
+    return 1f + (0.25f * sin(x * PI).toFloat()) - ((1f - ease(x)) * 0.7f)
 }
 
 /**
@@ -170,8 +170,8 @@ fun LevelClearedSplash(
             if (f in 0.001f..0.999f) {
                 drawCircle(
                     PuzzlerColors.gold.copy(alpha = 0.8f * (1f - f)),
-                    radius = size.minDimension / 2 * (0.3f + 0.7f * ease(f)),
-                    style = Stroke(10.dp.toPx() * (1f - f) + 1f),
+                    radius = size.minDimension / 2 * (0.3f + (0.7f * ease(f))),
+                    style = Stroke((10.dp.toPx() * (1f - f)) + 1f),
                 )
             }
         }
@@ -199,7 +199,7 @@ fun LevelClearedSplash(
                         modifier =
                             Modifier.graphicsLayer {
                                 // An earned star stamps down from oversized.
-                                val s = if (earned) 1f + 1.2f * (1f - ease(f)) else 1f
+                                val s = if (earned) 1f + (1.2f * (1f - ease(f))) else 1f
                                 scaleX = s
                                 scaleY = s
                             },
@@ -244,7 +244,7 @@ fun GameOverSplashOverlay(
                 modifier =
                     Modifier.graphicsLayer {
                         // Slams in from oversized.
-                        val s = 1f + 1.6f * (1f - slam)
+                        val s = 1f + (1.6f * (1f - slam))
                         scaleX = s
                         scaleY = s
                         alpha = slam

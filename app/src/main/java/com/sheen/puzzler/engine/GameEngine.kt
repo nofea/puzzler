@@ -235,8 +235,8 @@ class GameEngine(
             }
 
             else -> {
-                (at.row - 1..at.row + 1).filter { it in 0 until board.rows }.flatMap { Resolver.row(board, it) } +
-                    (at.col - 1..at.col + 1).filter { it in 0 until board.cols }.flatMap { Resolver.column(board, it) }
+                ((at.row - 1)..(at.row + 1)).filter { it in 0 until board.rows }.flatMap { Resolver.row(board, it) } +
+                    ((at.col - 1)..(at.col + 1)).filter { it in 0 until board.cols }.flatMap { Resolver.column(board, it) }
             }
         }
 

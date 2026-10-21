@@ -71,7 +71,7 @@ val appVersionCode =
         val (major, minor, patch) = parts
         require(minor < 100 && patch < 100) { "versionCode scheme needs MINOR and PATCH below 100: $appVersion" }
         // Untagged dev builds (0.0.0) still need a positive versionCode.
-        (major * 10_000 + minor * 100 + patch).coerceAtLeast(1)
+        ((major * 10_000) + (minor * 100) + patch).coerceAtLeast(1)
     }
 
 android {
@@ -110,6 +110,9 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.findByName("release")
+            // No native code of our own, so no native symbol tables for crash reports; skipping them also avoids
+            // AGP looking for the NDK devenv doesn't install (see packaging below).
+            ndk.debugSymbolLevel = "NONE"
         }
     }
 

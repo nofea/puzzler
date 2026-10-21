@@ -300,7 +300,7 @@ private fun barProgress(state: GameUiState): Float {
     return when {
         level.limited -> (state.score.toFloat() / level.star3).coerceIn(0f, 1f)
         total == 0 -> points
-        else -> (points + (1f - state.goals.total.toFloat() / total).coerceIn(0f, 1f)) / 2f
+        else -> (points + (1f - (state.goals.total.toFloat() / total)).coerceIn(0f, 1f)) / 2f
     }
 }
 

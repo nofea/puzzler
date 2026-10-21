@@ -112,7 +112,7 @@ fun BoardCanvas(
         if (selected != null) {
             drawRoundRect(
                 Color.White,
-                topLeft = Offset(selected.col * cell + 2, selected.row * cell + 2),
+                topLeft = Offset((selected.col * cell) + 2, (selected.row * cell) + 2),
                 size = Size(cell - 4, cell - 4),
                 cornerRadius = CornerRadius(cell * 0.18f),
                 style = Stroke(width = cell * 0.06f),
@@ -199,7 +199,7 @@ private fun spritesAt(
                 }
 
                 else -> {
-                    Sprite(piece, pos.row.toFloat(), pos.col.toFloat(), scale = 0.4f + 0.6f * t)
+                    Sprite(piece, pos.row.toFloat(), pos.col.toFloat(), scale = 0.4f + (0.6f * t))
                 } // a new special pops in
             }
         }
@@ -209,7 +209,7 @@ private fun spritesAt(
     val cleared =
         before.values
             .filter { (_, piece) -> piece.id !in currentIds }
-            .map { (pos, piece) -> Sprite(piece, pos.row.toFloat(), pos.col.toFloat(), 0.6f + 0.6f * shrink, shrink) }
+            .map { (pos, piece) -> Sprite(piece, pos.row.toFloat(), pos.col.toFloat(), 0.6f + (0.6f * shrink), shrink) }
     return sprites + cleared
 }
 
@@ -228,8 +228,8 @@ private fun columnProgress(
     col: Float,
     cols: Int,
 ): Float {
-    val span = 1f - COLUMN_STAGGER * (cols - 1)
-    return ((t - COLUMN_STAGGER * col) / span).coerceIn(0f, 1f)
+    val span = 1f - (COLUMN_STAGGER * (cols - 1))
+    return ((t - (COLUMN_STAGGER * col)) / span).coerceIn(0f, 1f)
 }
 
 /** Applies the level-cleared [hop] and the Game Over [collapse] (both 0..1) to the sprites. */
@@ -310,7 +310,7 @@ private fun DrawScope.drawStone(
     drawRoundRect(
         base.copy(alpha = alpha),
         topLeft = topLeft + Offset(inset, inset),
-        size = Size(cell - 2 * inset, cell - 2 * inset),
+        size = Size(cell - (2 * inset), cell - (2 * inset)),
         cornerRadius = CornerRadius(cell * 0.12f),
     )
     drawRoundRect(
@@ -323,10 +323,10 @@ private fun DrawScope.drawStone(
         // A crack shows the stone is one hit from breaking.
         val crack =
             Path().apply {
-                moveTo(topLeft.x + cell * 0.3f, topLeft.y + cell * 0.15f)
-                lineTo(topLeft.x + cell * 0.5f, topLeft.y + cell * 0.45f)
-                lineTo(topLeft.x + cell * 0.4f, topLeft.y + cell * 0.6f)
-                lineTo(topLeft.x + cell * 0.65f, topLeft.y + cell * 0.85f)
+                moveTo(topLeft.x + (cell * 0.3f), topLeft.y + (cell * 0.15f))
+                lineTo(topLeft.x + (cell * 0.5f), topLeft.y + (cell * 0.45f))
+                lineTo(topLeft.x + (cell * 0.4f), topLeft.y + (cell * 0.6f))
+                lineTo(topLeft.x + (cell * 0.65f), topLeft.y + (cell * 0.85f))
             }
         drawPath(crack, Color.Black.copy(alpha = 0.5f * alpha), style = Stroke(cell * 0.05f, cap = StrokeCap.Round))
     }
@@ -404,4 +404,4 @@ private fun lerp(
     a: Float,
     b: Float,
     t: Float,
-) = a + (b - a) * t
+) = a + ((b - a) * t)

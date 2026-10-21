@@ -85,7 +85,7 @@ object Scoring {
     const val CASCADE_BONUS = 0.5
 
     /** Cascade step 1 is the player's own move: x1, x1.5, x2, ... */
-    fun multiplier(cascadeStep: Int): Double = 1.0 + CASCADE_BONUS * (cascadeStep - 1)
+    fun multiplier(cascadeStep: Int): Double = 1.0 + (CASCADE_BONUS * (cascadeStep - 1))
 
     fun applyMultiplier(
         points: Int,
@@ -109,12 +109,12 @@ data class BoardSnapshot(
     val cols: Int,
     val cells: List<Cell>,
 ) {
-    operator fun get(pos: Pos): Cell = cells[pos.row * cols + pos.col]
+    operator fun get(pos: Pos): Cell = cells[(pos.row * cols) + pos.col]
 
     operator fun get(
         row: Int,
         col: Int,
-    ): Cell = cells[row * cols + col]
+    ): Cell = cells[(row * cols) + col]
 
     fun positions(): Sequence<Pos> =
         sequence {

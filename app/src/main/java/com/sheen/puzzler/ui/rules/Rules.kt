@@ -47,7 +47,7 @@ object Rules {
 
     private fun board(vararg marks: Pair<Pos, Char>): List<String> {
         val at = marks.toMap()
-        return (0 until 5).map { r -> (0 until 5).map { c -> at[Pos(r, c)] ?: ('0' + (r + 2 * c) % 4) }.joinToString("") }
+        return (0 until 5).map { r -> (0 until 5).map { c -> at[Pos(r, c)] ?: ('0' + ((r + (2 * c)) % 4)) }.joinToString("") }
     }
 
     private fun Board.special(

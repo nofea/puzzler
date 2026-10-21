@@ -34,7 +34,7 @@ class SoundPlayer {
                 val attack = (i / (sampleRate * 0.005)).coerceAtMost(1.0)
                 val decay = exp(-4.0 * i / n)
                 // Fundamental plus a soft octave for a bell-ish tone.
-                val s = sin(2 * PI * note.freq * t) + 0.3 * sin(4 * PI * note.freq * t)
+                val s = sin(2 * PI * note.freq * t) + (0.3 * sin(4 * PI * note.freq * t))
                 out += (s * attack * decay * volume * Short.MAX_VALUE / 1.3).toInt().toShort()
             }
         }

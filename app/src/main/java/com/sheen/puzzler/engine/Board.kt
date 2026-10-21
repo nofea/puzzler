@@ -26,18 +26,18 @@ class Board(
     /** Id the next new piece gets; saved with an Endless run so ids stay unique after a restore. */
     val nextPieceId get() = nextId
 
-    operator fun get(pos: Pos): Cell = cells[pos.row * cols + pos.col]
+    operator fun get(pos: Pos): Cell = cells[(pos.row * cols) + pos.col]
 
     operator fun get(
         row: Int,
         col: Int,
-    ): Cell = cells[row * cols + col]
+    ): Cell = cells[(row * cols) + col]
 
     operator fun set(
         pos: Pos,
         cell: Cell,
     ) {
-        cells[pos.row * cols + pos.col] = cell
+        cells[(pos.row * cols) + pos.col] = cell
     }
 
     fun inBounds(pos: Pos) = pos.row in 0 until rows && pos.col in 0 until cols

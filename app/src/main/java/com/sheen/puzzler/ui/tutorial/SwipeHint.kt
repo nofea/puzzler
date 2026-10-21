@@ -35,8 +35,8 @@ internal fun DrawScope.drawSwipeHint(
     drawLine(arrow, from, to, cell * 0.06f, StrokeCap.Round)
     val angle = atan2(to.y - from.y, to.x - from.x)
     for (side in listOf(-1, 1)) {
-        val a = angle + Math.PI.toFloat() * (1f - 0.18f * side)
-        drawLine(arrow, to, to + Offset(cos(a), sin(a)) * (cell * 0.22f), cell * 0.06f, StrokeCap.Round)
+        val a = angle + (Math.PI.toFloat() * (1f - (0.18f * side)))
+        drawLine(arrow, to, to + (Offset(cos(a), sin(a)) * (cell * 0.22f)), cell * 0.06f, StrokeCap.Round)
     }
 
     // Trail behind the fingertip.
@@ -45,7 +45,7 @@ internal fun DrawScope.drawSwipeHint(
     // Press ripple at the start.
     if (t < 0.3f) {
         val r = (t / 0.3f)
-        drawCircle(Color.White.copy(alpha = 0.6f * (1f - r)), cell * (0.2f + 0.25f * r), from, style = Stroke(cell * 0.04f))
+        drawCircle(Color.White.copy(alpha = 0.6f * (1f - r)), cell * (0.2f + (0.25f * r)), from, style = Stroke(cell * 0.04f))
     }
 
     // Fingertip.

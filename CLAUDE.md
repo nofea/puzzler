@@ -20,6 +20,7 @@ The toolchain comes from devenv (`devenv.nix`): JDK 21 (supplied by the devenv A
 | Auto-format (ktlint) | `format` | `./gradlew ktlintFormat` |
 | Secrets and mobile security scan | `security-scan` | gitleaks + mobsfscan (see `devenv.nix`) |
 
+- Version floors (`gradle/libs.versions.toml`): keep the Compose BOM at `2026.01.01` (Compose UI 1.10) or later. Before 1.10, Compose UI test ran matchers on the test thread and read semantics through the same snapshot observer as layout. That raced with the main thread on slow CI emulators ("Detected multithreaded access to SnapshotStateObserver"). Compose 1.10 pulls in Lifecycle 2.9, whose lint checks need AGP 8.9+ (8.13 here, with Gradle 8.14). Newer AndroidX releases that require compileSdk 36 can't be used, because the Nix SDK only has platform 35.
 - UI tests need a device in `adb devices`. For an emulator, use `devenv --profile emulator shell`, then `run-emulator` (headless API 35 AVD `puzzler-api35`; add `--window` to watch it).
 - `assembleRelease` fails on purpose when no signing key is configured. The key comes from `keystore.properties` at the repo root (gitignored, written by `gen-keystore`) or from the `PUZZLER_KEYSTORE_FILE`, `PUZZLER_KEYSTORE_PASSWORD`, `PUZZLER_KEY_ALIAS` and `PUZZLER_KEY_PASSWORD` env vars. Never commit keystores or `keystore.properties`.
 - `verify-apk` checks the release signature, and `install-apk` runs `adb install -r` with it.
