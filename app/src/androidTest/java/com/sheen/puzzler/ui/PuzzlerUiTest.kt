@@ -14,20 +14,25 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.sheen.puzzler.PuzzlerApplication
+import com.sheen.puzzler.engine.GameEngine
 import com.sheen.puzzler.engine.MoveFinder
 import com.sheen.puzzler.engine.Pos
+import com.sheen.puzzler.level.LevelDef
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.random.Random
 
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -48,10 +53,39 @@ class PuzzlerUiTest {
     }
 
     @Test
-    fun winningALevelUnlocksTheNext() {
-        runBlocking { app.progress.recordWin(1, score = 120, stars = 1) }
+    fun winningALevelUnlocksTheNextAndSurvivesRecreation() {
+        rule.onNodeWithTag("level_1").performClick()
+        val mirror = app.levels.level(1).newEngine()
+        while (mirror.score < LevelDef.PASS_SCORE) {
+            assertTrue("greedy player ran out of moves on level 1", mirror.canMove)
+            playMove(mirror, best(mirror, highest = true))
+        }
+        waitReady()
+        rule.onNodeWithTag("finish_button").assertIsEnabled().performClick()
+        rule.waitUntilExactlyOneExists(hasTestTag("result_dialog"), 5_000)
+        rule.onNodeWithText("Level 1 cleared!").assertExists()
+        rule.onNodeWithText("Map").performClick()
+
         rule.waitUntilExactlyOneExists(hasContentDescription("Level 2"), 5_000)
         rule.onNodeWithContentDescription("Level 3 locked").assertIsNotEnabled()
+
+        rule.activityRule.scenario.recreate()
+        rule.waitUntilExactlyOneExists(hasContentDescription("Level 2"), 5_000)
+        rule.onNodeWithContentDescription("Level 2").assertIsEnabled()
+    }
+
+    @Test
+    fun runningOutOfMovesBelowTheTargetFails() {
+        val levelId = FAIL_LEVEL
+        runBlocking { app.progress.recordWin(levelId - 1, score = 100, stars = 1) }
+        rule.waitUntilExactlyOneExists(hasContentDescription("Level $levelId"), 5_000)
+        rule.onNodeWithTag("level_$levelId").performClick()
+        val mirror = app.levels.level(levelId).newEngine()
+        while (mirror.canMove) playMove(mirror, best(mirror, highest = false))
+        assertTrue("worst-move player passed level $levelId; pick another FAIL_LEVEL", mirror.score < LevelDef.PASS_SCORE)
+        rule.waitUntilExactlyOneExists(hasTestTag("result_dialog"), 10_000)
+        rule.onNodeWithText("Out of moves").assertExists()
+        rule.onNodeWithTag("retry_button").assertExists()
     }
 
     @Test
@@ -70,13 +104,7 @@ class PuzzlerUiTest {
         rule.onNodeWithTag("level_1").performClick()
         // The screen's engine and this mirror share a seed, so the same swaps keep them in lockstep.
         val mirror = app.levels.level(1).newEngine()
-        while (mirror.canMove) {
-            val (a, b) = MoveFinder.findMove(mirror.board)!!
-            waitReady()
-            swipe(a, b)
-            mirror.swap(a, b)
-            rule.waitUntil(5_000) { movesText() == "${mirror.movesLeft}" }
-        }
+        while (mirror.canMove) playMove(mirror, MoveFinder.findMove(mirror.board)!!)
         rule.waitUntilExactlyOneExists(hasTestTag("result_dialog"), 10_000)
         rule.onNodeWithTag("score").assertTextEquals("${mirror.score}")
     }
@@ -87,6 +115,21 @@ class PuzzlerUiTest {
         rule.onNodeWithTag("sound_switch").assertIsOn().performClick()
         rule.waitUntil(5_000) { runBlocking { app.progress.progress.first().muted } }
         rule.onNodeWithTag("sound_switch").assertIsOff()
+    }
+
+    /** Swipes [move] on screen and plays it on [mirror], which shares the screen engine's seed and stays in lockstep. */
+    private fun playMove(mirror: GameEngine, move: Pair<Pos, Pos>) {
+        waitReady()
+        swipe(move.first, move.second)
+        mirror.swap(move.first, move.second)
+        rule.waitUntil(5_000) { movesText() == "${mirror.movesLeft}" }
+    }
+
+    /** The move that scores most (or least) right now, simulated on a copy so [mirror] is untouched. */
+    private fun best(mirror: GameEngine, highest: Boolean): Pair<Pos, Pos> {
+        val moves = MoveFinder.allMoves(mirror.board)
+        val score = { m: Pair<Pos, Pos> -> GameEngine(mirror.board.copy(Random(0)), 1).swap(m.first, m.second).scoreDelta }
+        return if (highest) moves.maxBy(score) else moves.minBy(score)
     }
 
     private fun movesText(): String =
@@ -102,5 +145,10 @@ class PuzzlerUiTest {
             fun center(p: Pos) = Offset((p.col + 0.5f) * cell, (p.row + 0.5f) * cell)
             swipe(center(a), center(b), durationMillis = 150)
         }
+    }
+
+    companion object {
+        /** An untimed level where always playing the lowest-scoring move ends below 100 (58 points on its seed). */
+        const val FAIL_LEVEL = 4
     }
 }
